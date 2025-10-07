@@ -15,5 +15,7 @@ namespace Entities
         public string LogoUrl { get; set; }
 
         public string Slug { get; set; }
+
+        public virtual ICollection<GymUser> GymUsers { get; set; }
     }
 }

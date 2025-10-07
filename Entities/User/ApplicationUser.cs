@@ -49,7 +49,17 @@ namespace Entities
 
         public virtual ICollection<ActiveSession> ActiveSessions { get; set; }
 
-  
+        public virtual ICollection<GymUser> GymUsers { get; set; }
+
+        public virtual ICollection<Practice> Practices { get; set; }
+
+        public virtual ICollection<Program> OwnedPrograms { get; set; }
+        public virtual ICollection<Program> SubmittedPrograms { get; set; }
+        public virtual ICollection<UserProgram> UserPrograms { get; set; }
+
+        public virtual ICollection<AthleteData> AthleteDatas { get; set; }
+
+        public virtual ICollection<Exercise> Exercises { get; set; }
 
     }
 
