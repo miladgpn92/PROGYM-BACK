@@ -1,0 +1,3 @@
+User-agent: *
+Disallow: /dtcms/*
+Sitemap: https://aigram.ir/sitemap.xml

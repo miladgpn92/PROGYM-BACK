@@ -1,0 +1,6 @@
+http://localhost:5222
+http://localhost:5000
+https://localhost:5000
+https://app.rzagency.ir
+http://app.rzagency.ir
+http://127.0.0.1:8080

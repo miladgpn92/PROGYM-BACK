@@ -1,0 +1,76 @@
+﻿@using Services.Services.CMS.GlobalSetting
+@using Services.Services.CMS.Setting
+@using SharedModels.Dtos
+@using Web.Pages.Template.Components.CommonComponent.AdminBar;
+
+@inject IGlobalSettingService GlobalSettingService
+@inject ISettingService SettingService
+
+@{
+    // Retrieve global and specific settings
+    var globalSettingResponse = GlobalSettingService.GetGlobalSetting();
+    var GlobalSetting = globalSettingResponse.IsSuccess ? globalSettingResponse.Model : new GetGlobalSettingDto();
+
+    var settingResponse = SettingService.GetSetting();
+    var Setting = settingResponse.IsSuccess ? settingResponse.Model : new SettingSelectDto();
+
+    // Default AdminBar configurations
+    bool AdminBarAdd = ViewBag.AdminBarAdd as bool? ?? false;
+    bool AdminBarEdit = ViewBag.AdminBarEdit as bool? ?? false;
+    bool AdminBarList = ViewBag.AdminBarList as bool? ?? false;
+    bool AdminBarDelete = ViewBag.AdminBarDelete as bool? ?? false;
+    string AdminBarRoute = ViewBag.AdminBarRoute as string ?? "/";
+    int? AdminBarId = ViewBag.AdminBarId as int? ?? null;
+
+
+    List<AdminBarCustomModel>? AdminBarCustom = ViewBag.AdminBarCustom;
+
+}
+
+<!DOCTYPE html>
+<html lang="fa-IR">
+<head>
+ 
+     <vc:seo-generator setting="Setting"></vc:seo-generator>
+    <vc:inject-code global-setting-dto="@GlobalSetting" is-header="true"></vc:inject-code>
+
+    <link rel="stylesheet" href="~/Template/dist/css/styles.css" asp-append-version="true">
+    <link rel="manifest" href="~/Template/manifest/manifest.json">
+    <meta name="theme-color" content="#3986D1">
+
+    @await RenderSectionAsync("Header", required: false)
+</head>
+<body class="font-heading-teko-bold dir-rtl" dir="rtl">
+    <vc:adminbar add="AdminBarAdd"
+                 edit="AdminBarEdit"
+                 list="AdminBarList"
+                 delete="AdminBarDelete"
+                 route="@AdminBarRoute"
+                 id="@AdminBarId"
+                 custom="AdminBarCustom">
+    </vc:adminbar>
+
+
+    <!-- Cursor Animation -->
+    <div class="cursor1"></div>
+    <div class="cursor2"></div>
+ 
+ 
+    <div class="has-smooth" id="has_smooth"></div>
+    <div id="smooth-wrapper">
+        <div id="smooth-content">
+            @RenderBody()
+   
+        </div>
+    </div>
+
+
+
+
+
+
+    <vc:inject-code global-setting-dto="@GlobalSetting" is-header="false"></vc:inject-code>
+    <script src="~/Template/dist/dist.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
