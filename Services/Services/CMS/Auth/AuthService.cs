@@ -111,6 +111,7 @@ namespace Services.Services.CMS.Auth
             }
             try
             {
+                ///admin
                 ApplicationUser admin = new ApplicationUser()
                 {
                     UserName = "09111275582",
@@ -122,6 +123,54 @@ namespace Services.Services.CMS.Auth
                 };
                 var admin1 = _userManager.CreateAsync(admin, "!@#QWE123qwe").Result;
                 await _userManager.AddToRoleAsync(admin, "admin");
+
+                /// manager
+
+                ApplicationUser manager = new ApplicationUser()
+                {
+                    UserName = "09991234567",
+                    PhoneNumber = "09991234567",
+                    PhoneNumberConfirmed = true,
+                    IsActive = true,
+                    UserRole = UsersRole.manager,
+                    IsRegisterComplete = true,
+                };
+                var manager1 = _userManager.CreateAsync(manager, "12345678").Result;
+                await _userManager.AddToRoleAsync(manager, "manager");
+
+
+
+
+                /// coach
+
+                ApplicationUser coach = new ApplicationUser()
+                {
+                    UserName = "09991234568",
+                    PhoneNumber = "09991234568",
+                    PhoneNumberConfirmed = true,
+                    IsActive = true,
+                    UserRole = UsersRole.coach,
+                    IsRegisterComplete = true,
+                };
+                var coach1 = _userManager.CreateAsync(coach, "12345678").Result;
+                await _userManager.AddToRoleAsync(coach, "coach");
+
+                ///Athlete
+                ///
+
+                ApplicationUser Athlete = new ApplicationUser()
+                {
+                    UserName = "09991234569",
+                    PhoneNumber = "09991234569",
+                    PhoneNumberConfirmed = true,
+                    IsActive = true,
+                    UserRole = UsersRole.athlete,
+                    IsRegisterComplete = true,
+                };
+                var athlete1 = _userManager.CreateAsync(Athlete, "12345678").Result;
+                await _userManager.AddToRoleAsync(Athlete, "athlete");
+
+                ///
                 return new ResponseModel(true);
             }
             catch (Exception)
@@ -384,56 +433,15 @@ namespace Services.Services.CMS.Auth
             //Generate Code
             string code = GenerateCode.AuthenticationCode(model.UserName, 4);
 
-            if (model.IsForgotpass)
-            {
-                /// Check user is null or not 
-                if (user == null)
-                {
-                    return new ResponseModel(false, _authLocalizer["UserNotFound"].Value);
-                }
-
-                //Check if the user is active
-                if (user.IsActive == false)
-                {
-                    return new ResponseModel(false, _authLocalizer["InActiveAccount"].Value);
-                }
-
-
-            }
-            else
-            {
+         
                 //Create User if null
                 if (user == null)
                 {
-                    // Register user with email
-                    if (model.UserName.Contains('@'))
-                    {
-                        user = new ApplicationUser()
-                        {
-                            UserName = model.UserName,
-                            Email = model.UserName,
-                            EmailConfirmed = false,
-                            IsRegisterComplete = false,
-                        };
-                    }
-                    //Register user with phonenumber
-                    else
-                    {
-                        user = new ApplicationUser()
-                        {
-                            UserName = model.UserName,
-                            PhoneNumber = model.UserName,
-                            IsRegisterComplete = false,
-                            PhoneNumberConfirmed = false,
-                        };
-                    }
-                    user.UserRole = UsersRole.user;
-                    await _userManager.CreateAsync(user);
-                    await _userManager.AddToRoleAsync(user, UsersRole.user.ToString());
 
-                   
 
-                }
+                return new ResponseModel(false, "کاربری یافت نشد");
+
+            }
                 else
                 {
 
@@ -445,7 +453,7 @@ namespace Services.Services.CMS.Auth
 
 
                 }
-            }
+          
 
 
 

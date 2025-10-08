@@ -15,7 +15,12 @@ namespace Common.Enums
         admin = 1,
         [Display(Name = "User", ResourceType = typeof(ResourceLibrary.Panel.Admin.Users.Users))]
         user = 2,
-      
+        [Display(Name = "مدیر")]
+        manager =3,            
+        [Display(Name = "مربی")]
+        coach =4,              
+        [Display(Name = "ورزشکار")]
+        athlete =5
     }
 
 }

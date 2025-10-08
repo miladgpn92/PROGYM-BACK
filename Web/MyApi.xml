@@ -62,6 +62,11 @@
             </summary>
             <returns>OK result if the user is authenticated.</returns>
         </member>
+        <member name="M:Web.Api.Dashboard.DashboardController.ManagerCounts(System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Returns count metrics for a manager: users, practices, programs.
+            </summary>
+        </member>
         <member name="M:Web.Api.Filemanager.FilemanagerController.CreateFolder(System.String,System.Threading.CancellationToken)">
             <summary>
             Creates a new folder with the specified name.

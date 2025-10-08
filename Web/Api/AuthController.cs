@@ -20,7 +20,7 @@ using Services;
 using Services.Services;
 using Services.Services.CMS.ActiveSession;
 using Services.Services.CMS.Auth;
- 
+using Services.Services.CMS.UserGym;
 using Services.Services.Email;
 using Shared.Api;
 using SharedModels;
@@ -36,14 +36,14 @@ namespace Web.Api
     {
         private readonly IAuthService _authService;
         private readonly IActiveSessionService _activeSessionService;
- 
+        private readonly IUserGymService _userGymService;
         private readonly IJwtService _jwtService;
-        public AuthController(IAuthService authService, IJwtService jwtService, IActiveSessionService activeSessionService)
+        public AuthController(IAuthService authService, IJwtService jwtService, IActiveSessionService activeSessionService,IUserGymService UserGymService)
         {
             _authService = authService;
             _jwtService = jwtService;
             _activeSessionService = activeSessionService;
- 
+            _userGymService = UserGymService;
         }
 
 
@@ -130,18 +130,28 @@ namespace Web.Api
                     _activeSessionService.AddActiveSession(res.Model.Id, HttpContext, jwt.access_token);
 
                 
-                 
+                    var userGymlist=await _userGymService.GetUserInfo(res.Model.Id, cancellationToken);
                     UserLoginData userLoginData = new UserLoginData()
                     {
                        
                         Family = res.Model.Family,
                      
+                        PicUrl= res.Model.PicUrl,
+                        Gender=res.Model.Gender,
                         IsRegisterComplete=res.Model.IsRegisterComplete,
                         JWT=jwt,
                         Name=res.Model.Name,
                         UserRole= res.Model.UserRole
 
                     };
+
+                 
+
+
+                    if (userGymlist.IsSuccess) {
+
+                        userLoginData.UserGymList = userGymlist.Model;
+                    }
 
 
                     return Ok(userLoginData);

@@ -1,3 +1,5 @@
+using Common.Consts;
+using Common.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -7,7 +9,7 @@ namespace Entities
     {
         public int GymId { get; set; }
         public int UserId { get; set; }
-        public string Role { get; set; }
+        public UsersRole Role { get; set; }
 
         public virtual Gym Gym { get; set; }
         public virtual ApplicationUser User { get; set; }

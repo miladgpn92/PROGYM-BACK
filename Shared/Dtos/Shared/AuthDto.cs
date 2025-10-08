@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Http;
 using ResourceLibrary;
 using ResourceLibrary.Resources.ErrorMsg;
 using SharedModels.CustomMapping;
+using SharedModels.Dtos.Shared;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -22,12 +23,21 @@ namespace SharedModels.Dtos
         public string UserName { get; set; }
 
         public bool IsForgotpass { get; set; }
-
         /// <summary>
         /// Android device token for auto fill sms
         /// </summary>
         public string Token { get; set; }
       
+    }
+
+    public class SendCodeDto
+    {
+        [Display(Name = "UserName", ResourceType = typeof(ResourceLibrary.Resources.Auth.AuthDto))]
+        [Required(AllowEmptyStrings = false, ErrorMessageResourceName = "RequierdMsg", ErrorMessageResourceType = typeof(ErrorMsg))]
+        [MaxLength(150, ErrorMessageResourceName = "MaxLenMsg", ErrorMessageResourceType = typeof(ErrorMsg))]
+        [RegularExpression(@"^(\+98|0)?9\d{9}$", ErrorMessage = "شماره موبایل وارد شده معتبر نیست.")]
+        public string UserName { get; set; }
+
     }
 
     public class ChangePassword
@@ -192,36 +202,25 @@ namespace SharedModels.Dtos
         public string Name { get; set; }
         public string Family { get; set; }
 
+        public string PicUrl { get; set; }
+
+        public Gender? Gender { get; set; }
+
+
         public UsersRole UserRole { get; set; }
 
         public bool IsRegisterComplete { get; set; }
-
-        public string BusinessName { get; set; }
-        public string BusinessDescription { get; set; }
-        public string InstagramUsername { get; set; }
-
-        public long? InstagramPK { get; set; }
-
-        public string InstagramDataCache { get; set; }
-        public string InstagramPostsCache { get; set; }
-
-        public DateTime? LastInstagramDataFetch { get; set; }
-
-        public DateTime? LastInstagramPostsFetch { get; set; }
-        // اضافه کردن شناسه دسته‌بندی کسب و کار
-        public int? BusinessCategoryId { get; set; }
-
-        public string BusinessCategoryTitle { get; set; }
-
+ 
         public object JWT { get; set; }
+
+        public int UserCount { get; set; }
+
+        public List<UserGymDto> UserGymList { get; set; }=new List<UserGymDto>();
     }
 
     public class UserExtraData
     {
-        public string BusinessName { get; set; }
-        public string BusinessDescription { get; set; }
-        public string InstagramUsername { get; set; }
-        public int? BusinessCategoryId { get; set; }
+      
 
     }
 
