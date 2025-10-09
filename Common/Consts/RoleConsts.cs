@@ -11,6 +11,12 @@ namespace Common.Consts
 		public const string Admin = "admin";
 
         public const string User = "user";
+
+        public const string Manager = "manager";
+
+        public const string Coach = "coach";
+
+        public const string Athlete = "athlete";
     }
 }
 	

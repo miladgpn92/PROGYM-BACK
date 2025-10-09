@@ -1,4 +1,5 @@
 using Entities;
+using AutoMapper;
 using ResourceLibrary.Resources.ErrorMsg;
 using SharedModels.Api;
 using System.ComponentModel.DataAnnotations;
@@ -18,5 +19,11 @@ namespace SharedModels.Dtos.Shared
         public string Title { get; set; }
         public string ApplicationUserName { get; set; }
         public string ApplicationUserFamily { get; set; }
+
+        public override void CustomMappings(IMappingExpression<PracticeCategory, PracticeCategorySelectDto> mapping)
+        {
+            mapping.ForMember(d => d.ApplicationUserName, opt => opt.MapFrom(s => s.SubmitterUser.Name));
+            mapping.ForMember(d => d.ApplicationUserFamily, opt => opt.MapFrom(s => s.SubmitterUser.Family));
+        }
     }
 }

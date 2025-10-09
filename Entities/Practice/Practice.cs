@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using System;
 using System.Collections.Generic;
 
 namespace Entities
@@ -12,6 +13,7 @@ namespace Entities
         public string ThumbPicUrl { get; set; }
         public string VideoUrl { get; set; }
         public int UserId { get; set; }
+        public DateTime CreateDate { get; set; }
 
         public virtual PracticeCategory PracticeCategory { get; set; }
         public virtual ApplicationUser User { get; set; }
@@ -45,6 +47,8 @@ namespace Entities
                    .WithMany(u => u.Practices)
                    .HasForeignKey(x => x.UserId)
                    .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Property(x => x.CreateDate);
 
             builder.HasIndex(x => x.PracticeCategoryId);
             builder.HasIndex(x => x.UserId);

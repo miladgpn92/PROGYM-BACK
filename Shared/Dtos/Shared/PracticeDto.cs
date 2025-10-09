@@ -49,5 +49,11 @@ namespace SharedModels.Dtos.Shared
         public DateTime CreateDate { get; set; }
         public string ApplicationUserName { get; set; }
         public string ApplicationUserFamily { get; set; }
+        public override void CustomMappings(AutoMapper.IMappingExpression<Practice, PracticeSelectDto> mapping)
+        {
+            mapping.ForMember(d => d.PracticeCategoryTitle, opt => opt.MapFrom(s => s.PracticeCategory.Title));
+            mapping.ForMember(d => d.ApplicationUserName, opt => opt.MapFrom(s => s.User.Name));
+            mapping.ForMember(d => d.ApplicationUserFamily, opt => opt.MapFrom(s => s.User.Family));
+        }
     }
 }

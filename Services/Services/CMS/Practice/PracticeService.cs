@@ -1,0 +1,139 @@
+using AutoMapper;
+using AutoMapper.QueryableExtensions;
+using Common;
+using Common.Enums;
+using Data.Repositories;
+using Entities;
+using Microsoft.EntityFrameworkCore;
+using SharedModels.Dtos.Shared;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace Services.Services.CMS.Practices
+{
+    public class PracticeService : IScopedDependency, IPracticeService
+    {
+        private readonly IRepository<Entities.Practice> _practiceRepo;
+        private readonly IRepository<GymUser> _gymUserRepo;
+        private readonly IRepository<Entities.PracticeCategory> _categoryRepo;
+        private readonly IMapper _mapper;
+
+        public PracticeService(
+            IRepository<Entities.Practice> practiceRepo,
+            IRepository<GymUser> gymUserRepo,
+            IRepository<Entities.PracticeCategory> categoryRepo,
+            IMapper mapper)
+        {
+            _practiceRepo = practiceRepo;
+            _gymUserRepo = gymUserRepo;
+            _categoryRepo = categoryRepo;
+            _mapper = mapper;
+        }
+
+        public async Task<ResponseModel<PracticeSelectDto>> CreateAsync(int gymId, int userId, PracticeDto dto, CancellationToken cancellationToken)
+        {
+            var hasAccess = await _gymUserRepo.TableNoTracking
+                .AnyAsync(gu => gu.GymId == gymId && gu.UserId == userId && gu.Role == UsersRole.manager, cancellationToken);
+            if (!hasAccess)
+                return new ResponseModel<PracticeSelectDto>(false, null, "Access denied");
+
+            // Validate category exists to avoid FK violation
+            if (!dto.PracticeCategoryId.HasValue ||
+                !await _categoryRepo.TableNoTracking.AnyAsync(c => c.Id == dto.PracticeCategoryId.Value, cancellationToken))
+            {
+                return new ResponseModel<PracticeSelectDto>(false, null, "Invalid PracticeCategoryId");
+            }
+
+            var entity = dto.ToEntity(_mapper);
+            entity.UserId = userId; // submitter/owner
+            entity.CreateDate = System.DateTime.Now;
+            await _practiceRepo.AddAsync(entity, cancellationToken);
+
+            var model = PracticeSelectDto.FromEntity(_mapper, entity);
+            return new ResponseModel<PracticeSelectDto>(true, model);
+        }
+
+        public async Task<ResponseModel> UpdateAsync(int gymId, int userId, int id, PracticeDto dto, CancellationToken cancellationToken)
+        {
+            var hasAccess = await _gymUserRepo.TableNoTracking
+                .AnyAsync(gu => gu.GymId == gymId && gu.UserId == userId && gu.Role == UsersRole.manager, cancellationToken);
+            if (!hasAccess)
+                return new ResponseModel(false, "Access denied");
+
+            var entity = await _practiceRepo.Table.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+            if (entity == null)
+                return new ResponseModel(false, "Not found");
+
+            // Update allowed fields explicitly to avoid key modification
+            entity.Name = dto.Name;
+            entity.Desc = dto.Desc;
+            entity.ThumbPicUrl = dto.ThumbPicUrl;
+            entity.VideoUrl = dto.VideoUrl;
+            if (dto.PracticeCategoryId.HasValue)
+            {
+                var catId = dto.PracticeCategoryId.Value;
+                var catExists = await _categoryRepo.TableNoTracking.AnyAsync(c => c.Id == catId, cancellationToken);
+                if (!catExists)
+                    return new ResponseModel(false, "Invalid PracticeCategoryId");
+                entity.PracticeCategoryId = catId;
+            }
+
+            await _practiceRepo.UpdateAsync(entity, cancellationToken);
+            return new ResponseModel(true, "");
+        }
+
+        public async Task<ResponseModel> DeleteAsync(int gymId, int userId, int id, CancellationToken cancellationToken)
+        {
+            var hasAccess = await _gymUserRepo.TableNoTracking
+                .AnyAsync(gu => gu.GymId == gymId && gu.UserId == userId && gu.Role == UsersRole.manager, cancellationToken);
+            if (!hasAccess)
+                return new ResponseModel(false, "Access denied");
+
+            var entity = await _practiceRepo.Table.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+            if (entity == null)
+                return new ResponseModel(false, "Not found");
+
+            await _practiceRepo.DeleteAsync(entity, cancellationToken);
+            return new ResponseModel(true, "");
+        }
+
+        public async Task<ResponseModel<List<PracticeSelectDto>>> GetListAsync(int gymId, int userId, string q, CancellationToken cancellationToken)
+        {
+            var hasAccess = await _gymUserRepo.TableNoTracking
+                .AnyAsync(gu => gu.GymId == gymId && gu.UserId == userId && gu.Role == UsersRole.manager, cancellationToken);
+            if (!hasAccess)
+                return new ResponseModel<List<PracticeSelectDto>>(false, null, "Access denied");
+
+            var query = _practiceRepo.TableNoTracking;
+            if (!string.IsNullOrWhiteSpace(q))
+                query = query.Where(x => x.Name.Contains(q));
+
+            var list = await query
+                .OrderByDescending(x => x.Id)
+                .ProjectTo<PracticeSelectDto>(_mapper.ConfigurationProvider)
+                .ToListAsync(cancellationToken);
+
+            return new ResponseModel<List<PracticeSelectDto>>(true, list);
+        }
+
+        public async Task<ResponseModel<PracticeSelectDto>> GetByIdAsync(int gymId, int userId, int id, CancellationToken cancellationToken)
+        {
+            var hasAccess = await _gymUserRepo.TableNoTracking
+                .AnyAsync(gu => gu.GymId == gymId && gu.UserId == userId, cancellationToken);
+            if (!hasAccess)
+                return new ResponseModel<PracticeSelectDto>(false, null, "Access denied");
+
+            var item = await _practiceRepo.TableNoTracking
+                .Where(x => x.Id == id)
+                .ProjectTo<PracticeSelectDto>(_mapper.ConfigurationProvider)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (item == null)
+                return new ResponseModel<PracticeSelectDto>(false, null, "Not found");
+
+            return new ResponseModel<PracticeSelectDto>(true, item);
+        }
+    }
+}
