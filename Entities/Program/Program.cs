@@ -13,8 +13,9 @@ namespace Entities
         public int CountOfPractice { get; set; }
         public ProgramTypes Type { get; set; }
 
-        public int OwnerId { get; set; }
+        public int? OwnerId { get; set; }
         public int SubmitterUserId { get; set; }
+        public System.DateTime CreateDate { get; set; }
 
         public virtual ApplicationUser Owner { get; set; }
         public virtual ApplicationUser SubmitterUser { get; set; }
@@ -46,6 +47,7 @@ namespace Entities
 
             builder.HasIndex(x => x.OwnerId);
             builder.HasIndex(x => x.SubmitterUserId);
+            builder.Property(x => x.CreateDate);
         }
     }
 }
