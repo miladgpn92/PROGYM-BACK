@@ -17,6 +17,7 @@ namespace Services.Services.CMS.Programs
     {
         private readonly IRepository<Entities.Program> _programRepo;
         private readonly IRepository<ProgramPractice> _programPracticeRepo;
+        private readonly IRepository<UserProgram> _userProgramRepo;
         private readonly IRepository<GymUser> _gymUserRepo;
         private readonly IRepository<ApplicationUser> _userRepo;
         private readonly IRepository<Entities.Practice> _practiceRepo;
@@ -28,6 +29,7 @@ namespace Services.Services.CMS.Programs
             IRepository<GymUser> gymUserRepo,
             IRepository<ApplicationUser> userRepo,
             IRepository<Entities.Practice> practiceRepo,
+            IRepository<UserProgram> userProgramRepo,
             IMapper mapper)
         {
             _programRepo = programRepo;
@@ -35,6 +37,7 @@ namespace Services.Services.CMS.Programs
             _gymUserRepo = gymUserRepo;
             _userRepo = userRepo;
             _practiceRepo = practiceRepo;
+            _userProgramRepo = userProgramRepo;
             _mapper = mapper;
         }
 
@@ -127,6 +130,54 @@ namespace Services.Services.CMS.Programs
                 return new ResponseModel(false, "Not found");
 
             await _programPracticeRepo.DeleteAsync(pp, cancellationToken);
+            return new ResponseModel(true, "");
+        }
+
+        public async Task<ResponseModel> AttachToAthleteAsync(
+            int gymId,
+            int managerUserId,
+            int programId,
+            int athleteUserId,
+            System.DateTime startDate,
+            System.DateTime? endDate,
+            CancellationToken cancellationToken)
+        {
+            // 1) Manager must have access to gym as manager
+            var managerHasAccess = await _gymUserRepo.TableNoTracking
+                .AnyAsync(g => g.GymId == gymId && g.UserId == managerUserId && g.Role == UsersRole.manager, cancellationToken);
+            if (!managerHasAccess)
+                return new ResponseModel(false, "Access denied");
+
+            // 2) Athlete must belong to gym
+            var athleteInGym = await _gymUserRepo.TableNoTracking
+                .AnyAsync(g => g.GymId == gymId && g.UserId == athleteUserId, cancellationToken);
+            if (!athleteInGym)
+                return new ResponseModel(false, "Athlete not in gym");
+
+            // 3) Program must belong to gym by owner or submitter membership
+            var program = await _programRepo.TableNoTracking.FirstOrDefaultAsync(p => p.Id == programId, cancellationToken);
+            if (program == null)
+                return new ResponseModel(false, "Program not found");
+
+            var programInGym = (program.OwnerId.HasValue && await _gymUserRepo.TableNoTracking.AnyAsync(g => g.GymId == gymId && g.UserId == program.OwnerId.Value, cancellationToken))
+                || await _gymUserRepo.TableNoTracking.AnyAsync(g => g.GymId == gymId && g.UserId == program.SubmitterUserId, cancellationToken);
+            if (!programInGym)
+                return new ResponseModel(false, "Program not in gym");
+
+            // 4) Validate dates
+            if (endDate.HasValue && endDate.Value <= startDate)
+                return new ResponseModel(false, "EndDate must be after StartDate");
+
+            // 5) Create link
+            var link = new UserProgram
+            {
+                UserId = athleteUserId,
+                ProgramId = programId,
+                StartDate = startDate,
+                EndDate = endDate
+            };
+            await _userProgramRepo.AddAsync(link, cancellationToken);
+
             return new ResponseModel(true, "");
         }
 

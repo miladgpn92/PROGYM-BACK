@@ -86,5 +86,16 @@ namespace Web.Api.Programs
             else
                 return BadRequest(res.Description);
         }
+
+        [HttpPost("[action]")]
+        public async Task<IActionResult> AttachToAthlete([FromQuery] int gymId, [FromBody] UserProgramAttachDto dto, CancellationToken cancellationToken)
+        {
+            var userId = User.Identity.GetUserIdInt();
+            var res = await _service.AttachToAthleteAsync(gymId, userId, dto.ProgramId, dto.AthleteUserId, dto.StartDate, dto.EndDate, cancellationToken);
+            if (res.IsSuccess)
+                return Ok();
+            else
+                return BadRequest(res.Description);
+        }
     }
 }

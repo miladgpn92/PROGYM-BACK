@@ -14,5 +14,13 @@ namespace Services.Services.CMS.Programs
         Task<ResponseModel<List<ProgramSelectDto>>> GetListAsync(int gymId, int userId, string q, CancellationToken cancellationToken);
         Task<ResponseModel<ProgramDetailDto>> GetByIdAsync(int gymId, int userId, int id, CancellationToken cancellationToken);
         Task<ResponseModel> DeletePracticeAsync(int gymId, int userId, int programPracticeId, CancellationToken cancellationToken);
+        Task<ResponseModel> AttachToAthleteAsync(
+            int gymId,
+            int managerUserId,
+            int programId,
+            int athleteUserId,
+            System.DateTime startDate,
+            System.DateTime? endDate,
+            CancellationToken cancellationToken);
     }
 }
