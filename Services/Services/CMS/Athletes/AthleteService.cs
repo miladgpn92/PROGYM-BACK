@@ -21,7 +21,7 @@ namespace Services.Services.CMS.Athletes
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IRepository<GymUser> _gymUserRepo;
-        private readonly IRepository<Gym> _gymRepo;
+        private readonly IRepository<Entities.Gym> _gymRepo;
         private readonly IRepository<AthleteData> _athleteDataRepo;
         private readonly IRepository<UserProgram> _userProgramRepo;
         private readonly IMapper _mapper;
@@ -31,7 +31,7 @@ namespace Services.Services.CMS.Athletes
         public AthleteService(
             UserManager<ApplicationUser> userManager,
             IRepository<GymUser> gymUserRepo,
-            IRepository<Gym> gymRepo,
+            IRepository<Entities.Gym> gymRepo,
             IRepository<AthleteData> athleteDataRepo,
             IRepository<UserProgram> userProgramRepo,
             IMapper mapper,

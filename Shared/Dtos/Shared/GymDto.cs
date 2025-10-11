@@ -24,6 +24,27 @@ namespace SharedModels.Dtos.Shared
         [Display(Name = "نامک (Slug)")]
         [MaxLength(200, ErrorMessageResourceName = nameof(ErrorMsg.MaxLenMsg), ErrorMessageResourceType = typeof(ErrorMsg))]
         public string Slug { get; set; }
+
+        [MaxLength(50, ErrorMessageResourceName = nameof(ErrorMsg.MaxLenMsg), ErrorMessageResourceType = typeof(ErrorMsg))]
+        public string ContactUsPhoneNumber { get; set; }
+
+        [MaxLength(50, ErrorMessageResourceName = nameof(ErrorMsg.MaxLenMsg), ErrorMessageResourceType = typeof(ErrorMsg))]
+        public string Phone { get; set; }
+
+        public double Lat { get; set; }
+        public double Lng { get; set; }
+
+        [MaxLength(500, ErrorMessageResourceName = nameof(ErrorMsg.MaxLenMsg), ErrorMessageResourceType = typeof(ErrorMsg))]
+        public string InstagramLink { get; set; }
+
+        [MaxLength(500, ErrorMessageResourceName = nameof(ErrorMsg.MaxLenMsg), ErrorMessageResourceType = typeof(ErrorMsg))]
+        public string TelegramLink { get; set; }
+
+        [MaxLength(500, ErrorMessageResourceName = nameof(ErrorMsg.MaxLenMsg), ErrorMessageResourceType = typeof(ErrorMsg))]
+        public string EitaaLink { get; set; }
+
+        [MaxLength(500, ErrorMessageResourceName = nameof(ErrorMsg.MaxLenMsg), ErrorMessageResourceType = typeof(ErrorMsg))]
+        public string BaleLink { get; set; }
     }
 
     public class GymSelectDto : BaseWithSeoDto<GymSelectDto, Gym>
@@ -32,6 +53,14 @@ namespace SharedModels.Dtos.Shared
         public string Address { get; set; }
         public string LogoUrl { get; set; }
         public string Slug { get; set; }
+        public string ContactUsPhoneNumber { get; set; }
+        public string Phone { get; set; }
+        public double Lat { get; set; }
+        public double Lng { get; set; }
+        public string InstagramLink { get; set; }
+        public string TelegramLink { get; set; }
+        public string EitaaLink { get; set; }
+        public string BaleLink { get; set; }
         public DateTime? CreateDate { get; set; }
         public string ApplicationUserName { get; set; }
         public string ApplicationUserFamily { get; set; }
