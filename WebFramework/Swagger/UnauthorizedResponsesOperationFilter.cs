@@ -35,6 +35,11 @@ namespace WebFramework.Swagger
                 operation.Responses.TryAdd("403", new OpenApiResponse { Description = "Forbidden" });
             }
 
+            if (operation.Security == null)
+            {
+                operation.Security = new System.Collections.Generic.List<OpenApiSecurityRequirement>();
+            }
+
             operation.Security.Add(new OpenApiSecurityRequirement
             {
                 {

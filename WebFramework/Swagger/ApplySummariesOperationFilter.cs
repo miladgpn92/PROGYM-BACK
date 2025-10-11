@@ -21,7 +21,13 @@ namespace WebFramework.Swagger
             var singularizeName = pluralizer.Singularize(controllerActionDescriptor.ControllerName);
             var pluralizeName = pluralizer.Pluralize(singularizeName);
 
-            var parameterCount = operation.Parameters.Where(p => p.Name != "version" && p.Name != "api-version").Count();
+            var parameters = operation.Parameters ?? new System.Collections.Generic.List<OpenApiParameter>();
+            if (operation.Parameters == null)
+            {
+                operation.Parameters = parameters;
+            }
+
+            var parameterCount = parameters.Where(p => p.Name != "version" && p.Name != "api-version").Count();
 
             if (IsGetAllAction())
             {
@@ -33,16 +39,16 @@ namespace WebFramework.Swagger
                 if (!operation.Summary.HasValue())
                     operation.Summary = $"Creates a {singularizeName}";
 
-                if (!operation.Parameters[0].Description.HasValue())
-                    operation.Parameters[0].Description = $"A {singularizeName} representation";
+                if (parameters.Count > 0 && !parameters[0].Description.HasValue())
+                    parameters[0].Description = $"A {singularizeName} representation";
             }
             else if (IsActionName("Read", "Get"))
             {
                 if (!operation.Summary.HasValue())
                     operation.Summary = $"Retrieves a {singularizeName} by unique id";
 
-                if (!operation.Parameters[0].Description.HasValue())
-                    operation.Parameters[0].Description = $"a unique id for the {singularizeName}";
+                if (parameters.Count > 0 && !parameters[0].Description.HasValue())
+                    parameters[0].Description = $"a unique id for the {singularizeName}";
             }
             else if (IsActionName("Put", "Edit", "Update"))
             {
@@ -50,16 +56,16 @@ namespace WebFramework.Swagger
                     operation.Summary = $"Updates a {singularizeName} by unique id";
 
 
-                if (!operation.Parameters[0].Description.HasValue())
-                    operation.Parameters[0].Description = $"A {singularizeName} representation";
+                if (parameters.Count > 0 && !parameters[0].Description.HasValue())
+                    parameters[0].Description = $"A {singularizeName} representation";
             }
             else if (IsActionName("Delete", "Remove"))
             {
                 if (!operation.Summary.HasValue())
                     operation.Summary = $"Deletes a {singularizeName} by unique id";
 
-                if (!operation.Parameters[0].Description.HasValue())
-                    operation.Parameters[0].Description = $"A unique id for the {singularizeName}";
+                if (parameters.Count > 0 && !parameters[0].Description.HasValue())
+                    parameters[0].Description = $"A unique id for the {singularizeName}";
             }
 
             #region Local Functions

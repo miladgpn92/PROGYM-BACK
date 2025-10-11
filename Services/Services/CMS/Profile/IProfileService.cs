@@ -1,4 +1,5 @@
-﻿using Common;
+using Common;
+using Microsoft.AspNetCore.Http;
 using SharedModels.Dtos;
 using System;
 using System.Collections.Generic;
@@ -14,5 +15,7 @@ namespace Services.Services.CMS.Profile
        Task<ResponseModel<ProfileDto>> GetProfile(int UserId, CancellationToken cancellationToken);
 
         Task<ResponseModel> UpdateProfile(ProfileDto profileDto, CancellationToken cancellationToken);
+
+        Task<ResponseModel<string>> UploadProfilePictureAsync(int userId, IFormFile image, CancellationToken cancellationToken);
     }
 }

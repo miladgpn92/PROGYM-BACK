@@ -9,9 +9,16 @@ namespace WebFramework.Swagger
         public void Apply(OpenApiOperation operation, OperationFilterContext context)
         {
             // Remove version parameter from all Operations
+            if (operation.Parameters == null || operation.Parameters.Count == 0)
+            {
+                return;
+            }
+
             var versionParameter = operation.Parameters.SingleOrDefault(p => p.Name == "version");
             if (versionParameter != null)
+            {
                 operation.Parameters.Remove(versionParameter);
+            }
         }
     }
 }
