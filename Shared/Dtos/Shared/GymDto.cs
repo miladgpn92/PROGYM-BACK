@@ -45,6 +45,10 @@ namespace SharedModels.Dtos.Shared
 
         [MaxLength(500, ErrorMessageResourceName = nameof(ErrorMsg.MaxLenMsg), ErrorMessageResourceType = typeof(ErrorMsg))]
         public string BaleLink { get; set; }
+
+        public long FileUsageBytes { get; set; }
+
+        public long FileStorageLimitBytes { get; set; }
     }
 
     public class GymSelectDto : BaseWithSeoDto<GymSelectDto, Gym>
@@ -64,5 +68,7 @@ namespace SharedModels.Dtos.Shared
         public DateTime? CreateDate { get; set; }
         public string ApplicationUserName { get; set; }
         public string ApplicationUserFamily { get; set; }
+        public long FileUsageBytes { get; set; }
+        public long FileStorageLimitBytes { get; set; }
     }
 }

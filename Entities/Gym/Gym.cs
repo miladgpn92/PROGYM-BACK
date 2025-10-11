@@ -38,6 +38,12 @@ namespace Entities
         public string BaleLink { get; set; }
 
         public virtual ICollection<GymUser> GymUsers { get; set; }
+
+        public long FileUsageBytes { get; set; }
+
+        public long FileStorageLimitBytes { get; set; } = 1024L * 1024L * 1024L;
+
+        public virtual ICollection<GymFile> GymFiles { get; set; }
     }
 
     public class GymConfiguration : IEntityTypeConfiguration<Gym>
@@ -78,6 +84,19 @@ namespace Entities
 
             builder.Property(x => x.BaleLink)
                    .HasMaxLength(500);
+
+            builder.Property(x => x.FileUsageBytes)
+                   .HasDefaultValue(0L)
+                   .IsRequired();
+
+            builder.Property(x => x.FileStorageLimitBytes)
+                   .HasDefaultValue(1024L * 1024L * 1024L)
+                   .IsRequired();
+
+            builder.HasMany(x => x.GymFiles)
+                   .WithOne(x => x.Gym)
+                   .HasForeignKey(x => x.GymId)
+                   .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

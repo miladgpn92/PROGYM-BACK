@@ -18,17 +18,20 @@ namespace Services.Services.CMS.Practices
         private readonly IRepository<Entities.Practice> _practiceRepo;
         private readonly IRepository<GymUser> _gymUserRepo;
         private readonly IRepository<Entities.PracticeCategory> _categoryRepo;
+        private readonly IRepository<GymFile> _gymFileRepo;
         private readonly IMapper _mapper;
 
         public PracticeService(
             IRepository<Entities.Practice> practiceRepo,
             IRepository<GymUser> gymUserRepo,
             IRepository<Entities.PracticeCategory> categoryRepo,
+            IRepository<GymFile> gymFileRepo,
             IMapper mapper)
         {
             _practiceRepo = practiceRepo;
             _gymUserRepo = gymUserRepo;
             _categoryRepo = categoryRepo;
+            _gymFileRepo = gymFileRepo;
             _mapper = mapper;
         }
 
@@ -46,9 +49,18 @@ namespace Services.Services.CMS.Practices
                 return new ResponseModel<PracticeSelectDto>(false, null, "Invalid PracticeCategoryId");
             }
 
+            if (!await ValidateGymFileOwnershipAsync(dto.ThumbGymFileId, gymId, cancellationToken) ||
+                !await ValidateGymFileOwnershipAsync(dto.VideoGymFileId, gymId, cancellationToken))
+            {
+                return new ResponseModel<PracticeSelectDto>(false, null, "Invalid gym file reference");
+            }
+
             var entity = dto.ToEntity(_mapper);
             entity.UserId = userId; // submitter/owner
             entity.CreateDate = System.DateTime.Now;
+            entity.ThumbFileId = dto.ThumbGymFileId;
+            entity.VideoFileId = dto.VideoGymFileId;
+
             await _practiceRepo.AddAsync(entity, cancellationToken);
 
             var model = PracticeSelectDto.FromEntity(_mapper, entity);
@@ -66,11 +78,17 @@ namespace Services.Services.CMS.Practices
             if (entity == null)
                 return new ResponseModel(false, "Not found");
 
+            if (!await ValidateGymFileOwnershipAsync(dto.ThumbGymFileId, gymId, cancellationToken) ||
+                !await ValidateGymFileOwnershipAsync(dto.VideoGymFileId, gymId, cancellationToken))
+            {
+                return new ResponseModel(false, "Invalid gym file reference");
+            }
+
             // Update allowed fields explicitly to avoid key modification
             entity.Name = dto.Name;
             entity.Desc = dto.Desc;
-            entity.ThumbPicUrl = dto.ThumbPicUrl;
-            entity.VideoUrl = dto.VideoUrl;
+            entity.ThumbFileId = dto.ThumbGymFileId;
+            entity.VideoFileId = dto.VideoGymFileId;
             if (dto.PracticeCategoryId.HasValue)
             {
                 var catId = dto.PracticeCategoryId.Value;
@@ -134,6 +152,15 @@ namespace Services.Services.CMS.Practices
                 return new ResponseModel<PracticeSelectDto>(false, null, "Not found");
 
             return new ResponseModel<PracticeSelectDto>(true, item);
+        }
+
+        private async Task<bool> ValidateGymFileOwnershipAsync(int? gymFileId, int gymId, CancellationToken cancellationToken)
+        {
+            if (!gymFileId.HasValue)
+                return true;
+
+            return await _gymFileRepo.TableNoTracking
+                .AnyAsync(f => f.Id == gymFileId.Value && f.GymId == gymId, cancellationToken);
         }
     }
 }
