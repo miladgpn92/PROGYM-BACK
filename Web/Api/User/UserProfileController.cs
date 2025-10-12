@@ -1,4 +1,5 @@
 using Common;
+using Common.Consts;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -11,6 +12,8 @@ using System.Threading.Tasks;
 namespace Web.Api.User
 {
     [ApiVersion("1")]
+    [Route("api/common/userprofile")]
+    [ApiExplorerSettings(GroupName = RoleConsts.Common)]
     [Authorize(AuthenticationSchemes = "JwtScheme")]
     public class UserProfileController : BaseController
     {

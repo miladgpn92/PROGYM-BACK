@@ -12,6 +12,8 @@ using System.Threading.Tasks;
 namespace Web.Api.Practice
 {
     [ApiVersion("1")]
+    [Route("api/manager/practicecategory")]
+    [ApiExplorerSettings(GroupName = RoleConsts.Manager)]
     [Authorize(Roles = RoleConsts.Manager, AuthenticationSchemes = "JwtScheme")]
     public class PracticeCategoryController : BaseController
     {

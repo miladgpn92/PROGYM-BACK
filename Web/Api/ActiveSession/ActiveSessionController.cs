@@ -11,7 +11,9 @@ using System.Threading;
 namespace Web.Api.ActiveSession
 {
     [ApiVersion("1")]
-    [Authorize(Roles = RoleConsts.Admin)]
+    [Authorize]
+    [Route("api/common/activesession")]
+    [ApiExplorerSettings(GroupName = RoleConsts.Common)]
     [NonController]
     public class ActiveSessionController : BaseController
     {

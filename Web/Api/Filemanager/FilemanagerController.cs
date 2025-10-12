@@ -12,6 +12,8 @@ using System.Data;
 namespace Web.Api.Filemanager
 {
     [ApiVersion("1")]
+    [Route("api/admin/filemanager")]
+    [ApiExplorerSettings(GroupName = RoleConsts.Admin)]
     [Authorize(Roles = RoleConsts.Admin, AuthenticationSchemes = "JwtScheme")]
     public class FilemanagerController : BaseController
     {

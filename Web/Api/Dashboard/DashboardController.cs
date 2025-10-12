@@ -1,4 +1,5 @@
 using Common;
+using Common.Consts;
 using Common.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -11,6 +12,8 @@ using System.Threading.Tasks;
 namespace Web.Api.Dashboard
 {
     [ApiVersion("1")]
+    [Route("api/manager/dashboard")]
+    [ApiExplorerSettings(GroupName = RoleConsts.Manager)]
     [Authorize(AuthenticationSchemes = "JwtScheme")]
     public class DashboardController : BaseController
     {

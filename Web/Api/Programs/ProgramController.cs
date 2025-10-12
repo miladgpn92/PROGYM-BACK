@@ -11,6 +11,8 @@ using System.Threading.Tasks;
 namespace Web.Api.Programs
 {
     [ApiVersion("1")]
+    [Route("api/manager/program")]
+    [ApiExplorerSettings(GroupName = RoleConsts.Manager)]
     [Authorize(Roles = RoleConsts.Manager, AuthenticationSchemes = "JwtScheme")]
     public class ProgramController : BaseController
     {

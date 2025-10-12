@@ -12,6 +12,8 @@ using System.Threading.Tasks;
 namespace Web.Api.AthleteApp
 {
     [ApiVersion("1")]
+    [Route("api/athlete/portal")]
+    [ApiExplorerSettings(GroupName = RoleConsts.Athlete)]
     [Authorize(Roles = RoleConsts.Athlete, AuthenticationSchemes = "JwtScheme")]
     public class AthletePortalController : BaseController
     {

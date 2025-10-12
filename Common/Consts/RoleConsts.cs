@@ -17,6 +17,7 @@ namespace Common.Consts
         public const string Coach = "coach";
 
         public const string Athlete = "athlete";
+        public const string Common = "common";
     }
 }
 	

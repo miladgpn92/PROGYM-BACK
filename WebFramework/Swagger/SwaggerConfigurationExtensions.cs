@@ -1,4 +1,5 @@
-﻿using Common.Utilities;
+﻿using Common.Consts;
+using Common.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
@@ -55,227 +56,71 @@ namespace WebFramework.Swagger
         {
             Assert.NotNull(services, nameof(services));
 
-            //More info : https://github.com/mattfrear/Swashbuckle.AspNetCore.Filters
-
-            #region AddSwaggerExamples
-            //Add services to use Example Filters in swagger
-            //If you want to use the Request and Response example filters (and have called options.ExampleFilters() above), then you MUST also call
-            //This method to register all ExamplesProvider classes form the assembly
-            //services.AddSwaggerExamplesFromAssemblyOf<PersonRequestExample>();
-
-            //We call this method for by reflection with the Startup type of entry assmebly (MyApi assembly)
-            var mainAssembly = Assembly.GetEntryAssembly(); // => MyApi project assembly
+            // اضافه‌کردن example filters به‌صورت داینامیک
+            var mainAssembly = Assembly.GetEntryAssembly();
             var mainType = mainAssembly.GetExportedTypes()[0];
-
             var methodName = nameof(Swashbuckle.AspNetCore.Filters.ServiceCollectionExtensions.AddSwaggerExamplesFromAssemblyOf);
-            //MethodInfo method = typeof(Swashbuckle.AspNetCore.Filters.ServiceCollectionExtensions).GetMethod(methodName);
-            MethodInfo method = typeof(Swashbuckle.AspNetCore.Filters.ServiceCollectionExtensions).GetRuntimeMethods().FirstOrDefault(x => x.Name == methodName && x.IsGenericMethod);
+            MethodInfo method = typeof(Swashbuckle.AspNetCore.Filters.ServiceCollectionExtensions)
+                .GetRuntimeMethods()
+                .FirstOrDefault(x => x.Name == methodName && x.IsGenericMethod);
             MethodInfo generic = method.MakeGenericMethod(mainType);
             generic.Invoke(null, new[] { services });
-            #endregion
 
-            //Add services and configuration to use swagger
+            // پیکربندی Swagger
             services.AddSwaggerGen(options =>
             {
                 var xmlDocPath = Path.Combine(AppContext.BaseDirectory, "MyApi.xml");
-                //show controller XML comments like summary
                 options.IncludeXmlComments(xmlDocPath, true);
-
                 options.EnableAnnotations();
-
-                #region DescribeAllEnumsAsStrings
-                //This method was Deprecated. 
                 options.SchemaFilter<EnumSchemaFilter>();
-           //   options.DescribeAllEnumsAsStrings();
-
-                //You can specify an enum to convert to/from string, uisng :
-                //[JsonConverter(typeof(StringEnumConverter))]
-                //public virtual MyEnums MyEnum { get; set; }
-
-                //Or can apply the StringEnumConverter to all enums globaly, using :
-                //SerializerSettings.Converters.Add(new StringEnumConverter { CamelCaseText = true });
-                //OR
-                //JsonConvert.DefaultSettings = () =>
-                //{
-                //    var settings = new JsonSerializerSettings();
-                //    settings.Converters.Add(new StringEnumConverter { CamelCaseText = true });
-                //    return settings;
-                //};
-                #endregion
-
-
-                options.SwaggerDoc("v1", new OpenApiInfo { Version = "v1", Title = "API V1" });
-              //  options.SwaggerDoc("v2", new OpenApiInfo { Version = "v2", Title = "API V2" });
-
-                #region Filters
-                //Enable to use [SwaggerRequestExample] & [SwaggerResponseExample]
                 options.ExampleFilters();
-
-
-                //Set summary of action if not already set
                 options.OperationFilter<ApplySummariesOperationFilter>();
-
-                #region Add UnAuthorized to Response
-                //Add 401 response and security requirements (Lock icon) to actions that need authorization
-                options.OperationFilter<UnauthorizedResponsesOperationFilter>(true, "OAuth2");
-                #endregion
-
-                #region Add Jwt Authentication
-                //Add Lockout icon on top of swagger ui page to authenticate
-                #region Old way
-                //options.AddSecurityDefinition("Bearer", new ApiKeyScheme
-                //{
-                //    Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
-                //    Name = "Authorization",
-                //    In = "header"
-                //});
-                //options.AddSecurityRequirement(new Dictionary<string, IEnumerable<string>>
-                //{
-                //    {"Bearer", new string[] { }}
-                //});
-                #endregion
-
-                //options.AddSecurityRequirement(new OpenApiSecurityRequirement
-                //{
-                //    {
-                //        new OpenApiSecurityScheme
-                //        {
-                //            Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "OAuth2" }
-                //        },
-                //        Array.Empty<string>() //new[] { "readAccess", "writeAccess" }
-                //    }
-                //});
-
-                //OAuth2Scheme
-                //options.AddSecurityDefinition("OAuth2", new OpenApiSecurityScheme
-                //{
-                //    //Scheme = "Bearer",
-                //    //In = ParameterLocation.Header,
-                //    Type = SecuritySchemeType.OAuth2,
-                //    Flows = new OpenApiOAuthFlows
-                //    {
-                //        Password = new OpenApiOAuthFlow
-                //        {
-                //            TokenUrl = new Uri("https://localhost:5001/api/v1/users/Token"),
-                //            //AuthorizationUrl = new Uri("https://localhost:5001/api/v1/users/Token")
-                //            //Scopes = new Dictionary<string, string>
-                //            //{
-                //            //    { "readAccess", "Access read operations" },
-                //            //    { "writeAccess", "Access write operations" }
-                //            //}
-                //        }
-                //    }
-                //});
-
-
-                //          options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-                //          {
-                //              Description = @"JWT Authorization header using the Bearer scheme. \r\n\r\n 
-                //                Enter 'Bearer' [space] and then your token in the text input below.
-                //                \r\n\r\nExample: 'Bearer 12345abcdef'",
-                //              Name = "Authorization",
-                //              In = ParameterLocation.Header,
-                //              Type = SecuritySchemeType.ApiKey,
-                //              Scheme = "Bearer"
-                //          });
-
-                //          options.AddSecurityRequirement(new OpenApiSecurityRequirement()
-                //{
-                //  {
-                //    new OpenApiSecurityScheme
-                //    {
-                //      Reference = new OpenApiReference
-                //        {
-                //          Type = ReferenceType.SecurityScheme,
-                //          Id = "Bearer"
-                //        },
-                //        Scheme = "oauth2",
-                //        Name = "Bearer",
-                //        In = ParameterLocation.Header,
-
-                //      },
-                //      new List<string>()
-                //    }
-                //  });
-
                 options.OperationFilter<AddAuthHeaderOperationFilter>();
+
+                // 🔹 تعریف چند Swagger Doc برای هر گروه نقش
+                options.SwaggerDoc(RoleConsts.Manager, new OpenApiInfo { Title = "Manager APIs", Version = "v1" });
+                options.SwaggerDoc(RoleConsts.Coach, new OpenApiInfo { Title = "Coach APIs", Version = "v1" });
+                options.SwaggerDoc(RoleConsts.Athlete, new OpenApiInfo { Title = "Athlete APIs", Version = "v1" });
+                options.SwaggerDoc(RoleConsts.Admin, new OpenApiInfo { Title = "Admin APIs", Version = "v1" });
+                options.SwaggerDoc("Common", new OpenApiInfo { Title = "Common APIs", Version = "v1" });
+
+
+                // 🔸 هر کنترلر باید [ApiExplorerSettings(GroupName = "Manager")] داشته باشه
+                // تا در داکیومنت مربوطه نمایش داده بشه
+                options.DocInclusionPredicate((docName, apiDesc) =>
+                {
+                    if (!apiDesc.TryGetMethodInfo(out MethodInfo methodInfo))
+                        return false;
+
+                    // خواندن GroupName از کنترلر یا اکشن
+                    var groupName = apiDesc.GroupName ??
+                                    methodInfo.DeclaringType?
+                                        .GetCustomAttributes<ApiExplorerSettingsAttribute>(true)
+                                        .FirstOrDefault()?.GroupName;
+
+                    return string.Equals(groupName, docName, StringComparison.OrdinalIgnoreCase);
+                });
+
+                // 🔹 تعریف احراز هویت Bearer
                 options.AddSecurityDefinition("bearer", new OpenApiSecurityScheme
                 {
-                    Description = "<b>Token only</b> - without Bearer prefix  <b style='color:red'>❤</b>",
+                    Description = "<b>Token only</b> - without Bearer prefix",
                     Type = SecuritySchemeType.Http,
                     BearerFormat = "JWT",
                     In = ParameterLocation.Header,
                     Scheme = "bearer"
                 });
 
+                options.OperationFilter<UnauthorizedResponsesOperationFilter>(true, "bearer");
 
-                //options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-                //{
-                //    In = ParameterLocation.Header,
-                //    Description = "Please insert JWT with Bearer into field",
-                //    Name = "Authorization",
-                //    Type = SecuritySchemeType.ApiKey
-                //});
-                //options.AddSecurityRequirement(new OpenApiSecurityRequirement()
-                //  {
-                //    {
-                //      new OpenApiSecurityScheme
-                //      {
-                //        Reference = new OpenApiReference
-                //          {
-                //            Type = ReferenceType.SecurityScheme,
-                //            Id = "Bearer"
-                //          },
-                //          Scheme = "oauth2",
-                //          Name = "Bearer",
-                //          In = ParameterLocation.Header,
-
-                //        },
-                //        new List<string>()
-                //      }
-                //    });
-
-                //options.AddSecurityRequirement(new OpenApiSecurityRequirement {
-                //   {
-                //     new OpenApiSecurityScheme
-                //     {
-                //       Reference = new OpenApiReference
-                //       {
-                //         Type = ReferenceType.SecurityScheme,
-                //         Id = "Bearer"
-                //       }
-                //      },
-                //      new string[] { }
-                //    }
-                //  });
-
-
-
-                #endregion
-
-                #region Versioning
-                // Remove version parameter from all Operations
-                options.OperationFilter<RemoveVersionParameters>();
-
-                //set version "api/v{version}/[controller]" from current swagger doc verion
-                options.DocumentFilter<SetVersionInPaths>();
-
-                //Seperate and categorize end-points by doc version
-                options.DocInclusionPredicate((docName, apiDesc) =>
-                {
-                    if (!apiDesc.TryGetMethodInfo(out MethodInfo methodInfo)) return false;
-
-                    var versions = methodInfo.DeclaringType
-                        .GetCustomAttributes<ApiVersionAttribute>(true)
-                        .SelectMany(attr => attr.Versions);
-
-                    return versions.Any(v => $"v{v.ToString()}" == docName);
-                });
-                #endregion
-
-                #endregion
+                // 🔹 اگر از Versioning استفاده نمی‌کنی این بخش را حذف کن
+                // وگرنه Swagger مسیرها را نادرست می‌سازد
+                // 🔸 برای ساده‌سازی، حذف شد
+                // options.OperationFilter<RemoveVersionParameters>();
+                // options.DocumentFilter<SetVersionInPaths>();
             });
         }
+
 
         public static void UseSwaggerAndUI(this IApplicationBuilder app)
         {
@@ -292,8 +137,12 @@ namespace WebFramework.Swagger
             //Swagger middleware for generate UI from swagger.json
             app.UseSwaggerUI(options =>
             {
-                options.SwaggerEndpoint("/swagger/v1/swagger.json", "V1 Docs");
-               // options.SwaggerEndpoint("/swagger/v2/swagger.json", "V2 Docs");
+                options.SwaggerEndpoint($"/swagger/{RoleConsts.Manager}/swagger.json", $"{RoleConsts.Manager}");
+                options.SwaggerEndpoint($"/swagger/{RoleConsts.Coach}/swagger.json", $"{RoleConsts.Coach}");
+                options.SwaggerEndpoint($"/swagger/{RoleConsts.Athlete}/swagger.json", $"{RoleConsts.Athlete}");
+                options.SwaggerEndpoint($"/swagger/{RoleConsts.Admin}/swagger.json", $"{RoleConsts.Admin}");
+                options.SwaggerEndpoint($"/swagger/Common/swagger.json", $"Common");
+                options.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.None);
 
                 #region Customizing
                 //// Display
@@ -301,32 +150,7 @@ namespace WebFramework.Swagger
                 #endregion
             });
 
-            //ReDoc UI middleware. ReDoc UI is an alternative to swagger-ui
-            app.UseReDoc(options =>
-            {
-                options.SpecUrl("/swagger/v1/swagger.json");
-                //options.SpecUrl("/swagger/v2/swagger.json");
-
-                #region Customizing
-                //By default, the ReDoc UI will be exposed at "/api-docs"
-                //options.RoutePrefix = "docs";
-                //options.DocumentTitle = "My API Docs";
-
-                options.EnableUntrustedSpec();
-                options.ScrollYOffset(10);
-                options.HideHostname();
-                options.HideDownloadButton();
-                options.ExpandResponses("200,201");
-                options.RequiredPropsFirst();
-                options.NoAutoAuth();
-                options.PathInMiddlePanel();
-                options.HideLoading();
-                options.NativeScrollbars();
-                options.DisableSearch();
-                options.OnlyRequiredInSamples();
-                options.SortPropsAlphabetically();
-                #endregion
-            });
+         
         }
     }
 }

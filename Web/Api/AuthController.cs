@@ -32,6 +32,8 @@ namespace Web.Api
 {
 
     [ApiVersion("1")]
+    [Route("api/common/auth")]
+    [ApiExplorerSettings(GroupName = RoleConsts.Common)]
     public class AuthController : BaseController
     {
         private readonly IAuthService _authService;

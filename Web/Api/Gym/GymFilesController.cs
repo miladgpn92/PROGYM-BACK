@@ -12,6 +12,8 @@ using System.Threading.Tasks;
 namespace Web.Api.Gym
 {
     [ApiVersion("1")]
+    [Route("api/manager/gymfiles")]
+    [ApiExplorerSettings(GroupName = RoleConsts.Manager)]
     [Authorize(Roles = RoleConsts.Manager, AuthenticationSchemes = "JwtScheme")]
     public class GymFilesController : BaseController
     {
