@@ -1,32 +1,33 @@
+using AutoMapper;
+using Common.Enums;
 using Entities;
 using ResourceLibrary.Resources.ErrorMsg;
 using SharedModels.Api;
+using SharedModels.CustomMapping;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 
 namespace SharedModels.Dtos.Shared
 {
     public class PracticeDto : SimpleBaseDto<PracticeDto, Practice>
     {
-       [Display(Name = " عنوان تمرین")]
+        [Display(Name = "Name")]
         [Required(AllowEmptyStrings = false, ErrorMessageResourceName = "RequierdMsg", ErrorMessageResourceType = typeof(ErrorMsg))]
         [MaxLength(200, ErrorMessageResourceName = "MaxLenMsg", ErrorMessageResourceType = typeof(ErrorMsg))]
         public string Name { get; set; }
 
-          [Display(Name = "توضیحات")]
+        [Display(Name = "Description")]
         public string Desc { get; set; }
 
-           [Display(Name = "تصویر ")]
-        public int? ThumbGymFileId { get; set; }
+        public IList<PracticeMediaRequestDto> Images { get; set; } = new List<PracticeMediaRequestDto>();
 
-         [Display(Name = "ویدیو")]
-        public int? VideoGymFileId { get; set; }
+        public IList<PracticeMediaRequestDto> Videos { get; set; } = new List<PracticeMediaRequestDto>();
 
-       [Display(Name = "دسته بندی")]
+        [Display(Name = "Practice Category")]
         [Required(AllowEmptyStrings = false, ErrorMessageResourceName = "RequierdMsg", ErrorMessageResourceType = typeof(ErrorMsg))]
         public int? PracticeCategoryId { get; set; }
-
-      
     }
 
     public class PracticeSelectDto : SimpleBaseDto<PracticeSelectDto, Practice>
@@ -38,22 +39,42 @@ namespace SharedModels.Dtos.Shared
         public DateTime CreateDate { get; set; }
         public string ApplicationUserName { get; set; }
         public string ApplicationUserFamily { get; set; }
+        public IList<PracticeMediaSelectDto> Images { get; set; } = new List<PracticeMediaSelectDto>();
+        public IList<PracticeMediaSelectDto> Videos { get; set; } = new List<PracticeMediaSelectDto>();
 
-        public int? ThumbGymFileId { get; set; }
-        public string ThumbRelativePath { get; set; }
-
-        public int? VideoGymFileId { get; set; }
-        public string VideoRelativePath { get; set; }
-
-        public override void CustomMappings(AutoMapper.IMappingExpression<Practice, PracticeSelectDto> mapping)
+        public override void CustomMappings(IMappingExpression<Practice, PracticeSelectDto> mapping)
         {
             mapping.ForMember(d => d.PracticeCategoryTitle, opt => opt.MapFrom(s => s.PracticeCategory.Title));
             mapping.ForMember(d => d.ApplicationUserName, opt => opt.MapFrom(s => s.User.Name));
             mapping.ForMember(d => d.ApplicationUserFamily, opt => opt.MapFrom(s => s.User.Family));
-            mapping.ForMember(d => d.ThumbGymFileId, opt => opt.MapFrom(s => s.ThumbFileId));
-            mapping.ForMember(d => d.ThumbRelativePath, opt => opt.MapFrom(s => s.ThumbFile != null ? s.ThumbFile.RelativePath : null));
-            mapping.ForMember(d => d.VideoGymFileId, opt => opt.MapFrom(s => s.VideoFileId));
-            mapping.ForMember(d => d.VideoRelativePath, opt => opt.MapFrom(s => s.VideoFile != null ? s.VideoFile.RelativePath : null));
+            mapping.ForMember(d => d.Images, opt => opt.MapFrom(s => s.MediaItems.Where(m => m.MediaType == MediaFileType.Image).OrderBy(m => m.DisplayOrder)));
+            mapping.ForMember(d => d.Videos, opt => opt.MapFrom(s => s.MediaItems.Where(m => m.MediaType == MediaFileType.Video).OrderBy(m => m.DisplayOrder)));
+        }
+    }
+
+    public class PracticeMediaRequestDto
+    {
+        public int? Id { get; set; }
+
+        [Required]
+        public int GymFileId { get; set; }
+
+        public int Order { get; set; }
+    }
+
+    public class PracticeMediaSelectDto : IHaveCustomMapping
+    {
+        public int Id { get; set; }
+        public int GymFileId { get; set; }
+        public int Order { get; set; }
+        public string RelativePath { get; set; }
+        public MediaFileType MediaType { get; set; }
+
+        public void CreateMappings(Profile profile)
+        {
+            profile.CreateMap<PracticeMedia, PracticeMediaSelectDto>()
+                   .ForMember(d => d.Order, opt => opt.MapFrom(s => s.DisplayOrder))
+                   .ForMember(d => d.RelativePath, opt => opt.MapFrom(s => s.GymFile != null ? s.GymFile.RelativePath : null));
         }
     }
 }

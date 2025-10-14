@@ -10,16 +10,13 @@ namespace Entities
         public string Name { get; set; }
         public string Desc { get; set; }
         public int PracticeCategoryId { get; set; }
-        public int? ThumbFileId { get; set; }
-        public int? VideoFileId { get; set; }
         public int UserId { get; set; }
         public DateTime CreateDate { get; set; }
 
         public virtual PracticeCategory PracticeCategory { get; set; }
         public virtual ApplicationUser User { get; set; }
-        public virtual GymFile ThumbFile { get; set; }
-        public virtual GymFile VideoFile { get; set; }
 
+        public virtual ICollection<PracticeMedia> MediaItems { get; set; }
         public virtual ICollection<ProgramPractice> ProgramPractices { get; set; }
     }
 
@@ -44,15 +41,10 @@ namespace Entities
                    .HasForeignKey(x => x.UserId)
                    .OnDelete(DeleteBehavior.Cascade);
 
-            builder.HasOne(x => x.ThumbFile)
-                   .WithMany()
-                   .HasForeignKey(x => x.ThumbFileId)
-                   .OnDelete(DeleteBehavior.NoAction);
-
-            builder.HasOne(x => x.VideoFile)
-                   .WithMany()
-                   .HasForeignKey(x => x.VideoFileId)
-                   .OnDelete(DeleteBehavior.NoAction);
+            builder.HasMany(x => x.MediaItems)
+                   .WithOne(m => m.Practice)
+                   .HasForeignKey(m => m.PracticeId)
+                   .OnDelete(DeleteBehavior.Cascade);
 
             builder.Property(x => x.CreateDate);
 

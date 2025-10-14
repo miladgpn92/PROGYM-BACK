@@ -31,7 +31,7 @@ namespace Services.Services.CMS.Gym
         private readonly IRepository<Entities.Gym> _gymRepo;
         private readonly IRepository<GymUser> _gymUserRepo;
         private readonly IRepository<GymFile> _fileRepo;
-        private readonly IRepository<Practice> _practiceRepo;
+        private readonly IRepository<PracticeMedia> _practiceMediaRepo;
         private readonly IMapper _mapper;
 
         public GymFileService(
@@ -39,14 +39,14 @@ namespace Services.Services.CMS.Gym
             IRepository<Entities.Gym> gymRepo,
             IRepository<GymUser> gymUserRepo,
             IRepository<GymFile> fileRepo,
-            IRepository<Practice> practiceRepo,
+            IRepository<PracticeMedia> practiceMediaRepo,
             IMapper mapper)
         {
             _dbContext = dbContext;
             _gymRepo = gymRepo;
             _gymUserRepo = gymUserRepo;
             _fileRepo = fileRepo;
-            _practiceRepo = practiceRepo;
+            _practiceMediaRepo = practiceMediaRepo;
             _mapper = mapper;
         }
 
@@ -203,21 +203,44 @@ namespace Services.Services.CMS.Gym
 
             gym.FileUsageBytes = Math.Max(0, gym.FileUsageBytes - entity.SizeBytes);
 
-            var referencingPractices = await _practiceRepo.Table
-                .Where(p => p.ThumbFileId == entity.Id || p.VideoFileId == entity.Id)
+            var mediaToDelete = await _practiceMediaRepo.Table
+                .Where(pm => pm.GymFileId == entity.Id)
                 .ToListAsync(cancellationToken);
 
-            if (referencingPractices.Count > 0)
+            if (mediaToDelete.Count > 0)
             {
-                foreach (var practice in referencingPractices)
-                {
-                    if (practice.ThumbFileId == entity.Id)
-                        practice.ThumbFileId = null;
-                    if (practice.VideoFileId == entity.Id)
-                        practice.VideoFileId = null;
-                }
+                var affectedPracticeIds = mediaToDelete
+                    .Select(pm => pm.PracticeId)
+                    .Distinct()
+                    .ToList();
 
-                await _practiceRepo.UpdateRangeAsync(referencingPractices, cancellationToken, saveNow: false);
+                await _practiceMediaRepo.DeleteRangeAsync(mediaToDelete, cancellationToken, saveNow: false);
+
+                if (affectedPracticeIds.Count > 0)
+                {
+                    var remainingMedia = await _practiceMediaRepo.Table
+                        .Where(pm => affectedPracticeIds.Contains(pm.PracticeId))
+                        .ToListAsync(cancellationToken);
+
+                    var reordered = new List<PracticeMedia>();
+                    foreach (var group in remainingMedia.GroupBy(pm => new { pm.PracticeId, pm.MediaType }))
+                    {
+                        var orderedItems = group.OrderBy(pm => pm.DisplayOrder).ToList();
+                        for (var i = 0; i < orderedItems.Count; i++)
+                        {
+                            if (orderedItems[i].DisplayOrder != i)
+                            {
+                                orderedItems[i].DisplayOrder = i;
+                                reordered.Add(orderedItems[i]);
+                            }
+                        }
+                    }
+
+                    if (reordered.Count > 0)
+                    {
+                        await _practiceMediaRepo.UpdateRangeAsync(reordered, cancellationToken, saveNow: false);
+                    }
+                }
             }
 
             await _fileRepo.DeleteAsync(entity, cancellationToken, saveNow: false);
