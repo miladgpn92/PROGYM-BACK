@@ -7,6 +7,7 @@ using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using Common;
 using Common.Enums;
+using DariaCMS.Common;
 using Data.Repositories;
 using Entities;
 using Microsoft.AspNetCore.Identity;
@@ -84,46 +85,44 @@ namespace Services.Services.App.Athlete
             return new ResponseModel<int>(true, entity.Id);
         }
 
-        public async Task<ResponseModel<AthleteCurrentProgramDto>> GetCurrentProgramAsync(int userId, CancellationToken cancellationToken)
+        public async Task<ResponseModel<PagedResult<AthleteCurrentProgramDto>>> GetCurrentProgramAsync(int userId, Pageres pager, CancellationToken cancellationToken)
         {
+            pager ??= new Pageres();
+            pager.Normalize();
+
             var today = DateTime.UtcNow.Date;
 
-            var baseQuery = _userProgramRepo.TableNoTracking
+            var query = _userProgramRepo.TableNoTracking
                 .Where(up => up.UserId == userId)
-                .Select(up => new
+                .Select(up => new AthleteCurrentProgramDto
                 {
-                    up.Id,
-                    up.ProgramId,
-                    up.StartDate,
-                    up.EndDate,
-                    ProgramTitle = up.Program.Title
+                    UserProgramId = up.Id,
+                    ProgramId = up.ProgramId,
+                    ProgramTitle = up.Program.Title,
+                    StartDate = up.StartDate,
+                    EndDate = up.EndDate,
+                    IsActive = !up.EndDate.HasValue || up.EndDate.Value.Date >= today
                 });
 
-            var currentProgram = await baseQuery
-                .Where(up => !up.EndDate.HasValue || up.EndDate.Value.Date >= today)
-                .OrderByDescending(up => up.StartDate)
-                .FirstOrDefaultAsync(cancellationToken);
+            var totalCount = await query.CountAsync(cancellationToken);
+            if (totalCount == 0)
+                return new ResponseModel<PagedResult<AthleteCurrentProgramDto>>(false, null, "Program not assigned");
 
-            if (currentProgram == null)
+            var items = await query
+                .OrderByDescending(x => x.IsActive)
+                .ThenByDescending(x => x.StartDate)
+                .Paginate(pager)
+                .ToListAsync(cancellationToken);
+
+            var result = new PagedResult<AthleteCurrentProgramDto>
             {
-                currentProgram = await baseQuery
-                    .OrderByDescending(up => up.StartDate)
-                    .FirstOrDefaultAsync(cancellationToken);
-            }
-
-            if (currentProgram == null)
-                return new ResponseModel<AthleteCurrentProgramDto>(false, null, "Program not assigned");
-
-            var dto = new AthleteCurrentProgramDto
-            {
-                UserProgramId = currentProgram.Id,
-                ProgramId = currentProgram.ProgramId,
-                ProgramTitle = currentProgram.ProgramTitle,
-                StartDate = currentProgram.StartDate,
-                EndDate = currentProgram.EndDate
+                Items = items,
+                TotalCount = totalCount,
+                PageNumber = pager.PageNumber,
+                PageSize = pager.PageSize
             };
 
-            return new ResponseModel<AthleteCurrentProgramDto>(true, dto);
+            return new ResponseModel<PagedResult<AthleteCurrentProgramDto>>(true, result);
         }
 
         public async Task<ResponseModel<ProgramDetailDto>> GetProgramDetailAsync(int userId, int programId, CancellationToken cancellationToken)

@@ -1,5 +1,6 @@
 using Common.Consts;
 using Common;
+using DariaCMS.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Services.Services.App.Athlete;
@@ -45,10 +46,14 @@ namespace Web.Api.AthleteApp
         }
 
         [HttpGet("program/current")]
-        public async Task<IActionResult> GetCurrentProgram(CancellationToken cancellationToken)
+        public async Task<IActionResult> GetCurrentProgram(
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10,
+            CancellationToken cancellationToken = default)
         {
             var userId = User.Identity.GetUserIdInt();
-            var res = await _service.GetCurrentProgramAsync(userId, cancellationToken);
+            var pager = new Pageres { PageNumber = pageNumber, PageSize = pageSize };
+            var res = await _service.GetCurrentProgramAsync(userId, pager, cancellationToken);
             if (res.IsSuccess)
                 return Ok(res.Model);
             return BadRequest(res.Message);

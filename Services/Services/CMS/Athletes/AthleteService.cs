@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using AutoMapper;
 using Common;
 using Common.Enums;
+using DariaCMS.Common;
 using Data.Repositories;
 using Entities;
 using Microsoft.AspNetCore.Identity;
@@ -85,15 +86,7 @@ namespace Services.Services.CMS.Athletes
                 var defaultPwd = dto.PhoneNumber.Length >= 6 ? dto.PhoneNumber[^6..] : dto.PhoneNumber;
                 try { await _userManager.AddPasswordAsync(user, defaultPwd); } catch { /* ignore weak policy issues */ }
 
-                var initialData = new AthleteData
-                {
-                    UserId = user.Id,
-                    SubmitDate = DateTime.Now,
-                    Height = 0,
-                    Age = 0,
-                    Weight = 0
-                };
-                await _athleteDataRepo.AddAsync(initialData, cancellationToken);
+         
             }
             else
             {
@@ -127,12 +120,15 @@ namespace Services.Services.CMS.Athletes
             return new ResponseModel<int>(true, user.Id);
         }
 
-        public async Task<ResponseModel<List<AthleteSelectDto>>> GetListAsync(int gymId, int managerId, string q, CancellationToken cancellationToken)
+        public async Task<ResponseModel<PagedResult<AthleteSelectDto>>> GetListAsync(int gymId, int managerId, string q, Pageres pager, CancellationToken cancellationToken)
         {
+            pager ??= new Pageres();
+            pager.Normalize();
+
             var isManagerLinked = await _gymUserRepo.TableNoTracking
                 .AnyAsync(gu => gu.GymId == gymId && gu.UserId == managerId && gu.Role == UsersRole.manager, cancellationToken);
             if (!isManagerLinked)
-                return new ResponseModel<List<AthleteSelectDto>>(false, null, "Unauthorized manager for this gym");
+                return new ResponseModel<PagedResult<AthleteSelectDto>>(false, null, "Unauthorized manager for this gym");
 
             var query = from gu in _gymUserRepo.TableNoTracking
                         join u in _userManager.Users on gu.UserId equals u.Id
@@ -152,8 +148,22 @@ namespace Services.Services.CMS.Athletes
                 query = query.Where(x => (x.Name ?? "").Contains(term) || (x.Family ?? "").Contains(term) || (x.PhoneNumber ?? "").Contains(term));
             }
 
-            var list = await query.OrderBy(x => x.Family).ThenBy(x => x.Name).ToListAsync(cancellationToken);
-            return new ResponseModel<List<AthleteSelectDto>>(true, list);
+            var ordered = query.OrderBy(x => x.Family).ThenBy(x => x.Name);
+            var totalCount = await ordered.CountAsync(cancellationToken);
+
+            var items = await ordered
+                .Paginate(pager)
+                .ToListAsync(cancellationToken);
+
+            var result = new PagedResult<AthleteSelectDto>
+            {
+                Items = items,
+                TotalCount = totalCount,
+                PageNumber = pager.PageNumber,
+                PageSize = pager.PageSize
+            };
+
+            return new ResponseModel<PagedResult<AthleteSelectDto>>(true, result);
         }
 
         public async Task<ResponseModel> UpdateAsync(int gymId, int managerId, int userId, AthleteUpdateDto dto, CancellationToken cancellationToken)

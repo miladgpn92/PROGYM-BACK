@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Common;
 using Common.Enums;
+using DariaCMS.Common;
 using Data.Repositories;
 using Entities;
 using Microsoft.AspNetCore.Identity;
@@ -114,11 +115,14 @@ namespace Services.Services.CMS.GymStaff
             return new ResponseModel<int>(true, user.Id);
         }
 
-        public async Task<ResponseModel<List<GymStaffSelectDto>>> GetListAsync(int gymId, int managerId, string search, CancellationToken cancellationToken)
+        public async Task<ResponseModel<PagedResult<GymStaffSelectDto>>> GetListAsync(int gymId, int managerId, string search, Pageres pager, CancellationToken cancellationToken)
         {
+            pager ??= new Pageres();
+            pager.Normalize();
+
             var hasAccess = await ManagerHasAccessAsync(gymId, managerId, cancellationToken);
             if (!hasAccess)
-                return new ResponseModel<List<GymStaffSelectDto>>(false, null, "Unauthorized manager for this gym");
+                return new ResponseModel<PagedResult<GymStaffSelectDto>>(false, null, "Unauthorized manager for this gym");
 
             var query = from gu in _gymUserRepo.TableNoTracking
                         join u in _userManager.Users on gu.UserId equals u.Id
@@ -142,13 +146,26 @@ namespace Services.Services.CMS.GymStaff
                     (x.PhoneNumber ?? "").Contains(term));
             }
 
-            var list = await query
+            var ordered = query
                 .OrderBy(x => x.Role)
                 .ThenBy(x => x.Family)
-                .ThenBy(x => x.Name)
+                .ThenBy(x => x.Name);
+
+            var totalCount = await ordered.CountAsync(cancellationToken);
+
+            var items = await ordered
+                .Paginate(pager)
                 .ToListAsync(cancellationToken);
 
-            return new ResponseModel<List<GymStaffSelectDto>>(true, list);
+            var result = new PagedResult<GymStaffSelectDto>
+            {
+                Items = items,
+                TotalCount = totalCount,
+                PageNumber = pager.PageNumber,
+                PageSize = pager.PageSize
+            };
+
+            return new ResponseModel<PagedResult<GymStaffSelectDto>>(true, result);
         }
 
         public async Task<ResponseModel<GymStaffSelectDto>> GetByIdAsync(int gymId, int managerId, int userId, CancellationToken cancellationToken)
@@ -275,4 +292,3 @@ namespace Services.Services.CMS.GymStaff
         }
     }
 }
-

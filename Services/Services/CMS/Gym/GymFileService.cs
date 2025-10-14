@@ -54,8 +54,7 @@ namespace Services.Services.CMS.Gym
         {
             request ??= new GymFileListRequest();
             request.Pager ??= new Pageres();
-
-            NormalizePager(request.Pager);
+            request.Pager.Normalize();
 
             var hasAccess = await _gymUserRepo.TableNoTracking
                 .AnyAsync(gu => gu.GymId == gymId && gu.UserId == userId, cancellationToken);
@@ -77,7 +76,9 @@ namespace Services.Services.CMS.Gym
             var result = new GymFilePagedResult
             {
                 Items = items,
-                TotalCount = totalCount
+                TotalCount = totalCount,
+                PageNumber = request.Pager.PageNumber,
+                PageSize = request.Pager.PageSize
             };
 
             return new ResponseModel<GymFilePagedResult>(true, result);
@@ -223,14 +224,6 @@ namespace Services.Services.CMS.Gym
             await _dbContext.SaveChangesAsync(cancellationToken);
 
             return new ResponseModel(true, "");
-        }
-
-        private static void NormalizePager(Pageres pager)
-        {
-            if (pager.PageSize <= 0 || pager.PageSize > 100)
-                pager.PageSize = 10;
-            if (pager.PageNumber <= 0)
-                pager.PageNumber = 1;
         }
 
         private static bool ExceedsLimit(long currentUsage, long pendingUsage, long nextSize, long limit)

@@ -137,8 +137,8 @@ namespace Web.Api
                     {
                        
                         Family = res.Model.Family,
-                     
-                        PicUrl= res.Model.PicUrl,
+                        Phonenumber = res.Model.PhoneNumber,
+                        PicUrl = res.Model.PicUrl,
                         Gender=res.Model.Gender,
                         IsRegisterComplete=res.Model.IsRegisterComplete,
                         JWT=jwt,

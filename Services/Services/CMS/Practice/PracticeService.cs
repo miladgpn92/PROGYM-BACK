@@ -2,6 +2,7 @@ using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using Common;
 using Common.Enums;
+using DariaCMS.Common;
 using Data.Repositories;
 using Entities;
 using Microsoft.EntityFrameworkCore;
@@ -117,23 +118,37 @@ namespace Services.Services.CMS.Practices
             return new ResponseModel(true, "");
         }
 
-        public async Task<ResponseModel<List<PracticeSelectDto>>> GetListAsync(int gymId, int userId, string q, CancellationToken cancellationToken)
+        public async Task<ResponseModel<PagedResult<PracticeSelectDto>>> GetListAsync(int gymId, int userId, string q, Pageres pager, CancellationToken cancellationToken)
         {
+            pager ??= new Pageres();
+            pager.Normalize();
+
             var hasAccess = await _gymUserRepo.TableNoTracking
                 .AnyAsync(gu => gu.GymId == gymId && gu.UserId == userId && gu.Role == UsersRole.manager, cancellationToken);
             if (!hasAccess)
-                return new ResponseModel<List<PracticeSelectDto>>(false, null, "Access denied");
+                return new ResponseModel<PagedResult<PracticeSelectDto>>(false, null, "Access denied");
 
             var query = _practiceRepo.TableNoTracking;
             if (!string.IsNullOrWhiteSpace(q))
                 query = query.Where(x => x.Name.Contains(q));
 
-            var list = await query
-                .OrderByDescending(x => x.Id)
+            var ordered = query.OrderByDescending(x => x.Id);
+            var totalCount = await ordered.CountAsync(cancellationToken);
+
+            var items = await ordered
+                .Paginate(pager)
                 .ProjectTo<PracticeSelectDto>(_mapper.ConfigurationProvider)
                 .ToListAsync(cancellationToken);
 
-            return new ResponseModel<List<PracticeSelectDto>>(true, list);
+            var result = new PagedResult<PracticeSelectDto>
+            {
+                Items = items,
+                TotalCount = totalCount,
+                PageNumber = pager.PageNumber,
+                PageSize = pager.PageSize
+            };
+
+            return new ResponseModel<PagedResult<PracticeSelectDto>>(true, result);
         }
 
         public async Task<ResponseModel<PracticeSelectDto>> GetByIdAsync(int gymId, int userId, int id, CancellationToken cancellationToken)

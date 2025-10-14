@@ -204,6 +204,8 @@ namespace SharedModels.Dtos
 
         public string PicUrl { get; set; }
 
+        public string Phonenumber { get; set; }
+
         public Gender? Gender { get; set; }
 
 

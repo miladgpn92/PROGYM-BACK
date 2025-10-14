@@ -24,6 +24,7 @@ namespace SharedModels.Dtos.Shared
         public string ProgramTitle { get; set; }
         public DateTime StartDate { get; set; }
         public DateTime? EndDate { get; set; }
+        public bool IsActive { get; set; }
     }
 
     public class ExerciseCreateDto

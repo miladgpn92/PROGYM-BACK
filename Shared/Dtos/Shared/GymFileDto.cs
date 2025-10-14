@@ -31,10 +31,8 @@ namespace SharedModels.Dtos.Shared
         }
     }
 
-    public class GymFilePagedResult
+    public class GymFilePagedResult : PagedResult<GymFileDto>
     {
-        public List<GymFileDto> Items { get; set; } = new();
-        public int TotalCount { get; set; }
     }
 
     public class GymFileListRequest

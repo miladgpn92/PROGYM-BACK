@@ -1,5 +1,6 @@
 using Common.Consts;
 using Common;
+using DariaCMS.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Services.Services.CMS.PracticeCategory;
@@ -36,10 +37,16 @@ namespace Web.Api.Practice
         }
 
         [HttpGet("[action]")]
-        public async Task<IActionResult> List([FromQuery] int gymId, string? q, CancellationToken cancellationToken)
+        public async Task<IActionResult> List(
+            [FromQuery] int gymId,
+            [FromQuery] string? q,
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10,
+            CancellationToken cancellationToken = default)
         {
             var userId = User.Identity.GetUserIdInt();
-            var res = await _service.GetListAsync(gymId, userId, q, cancellationToken);
+            var pager = new Pageres { PageNumber = pageNumber, PageSize = pageSize };
+            var res = await _service.GetListAsync(gymId, userId, q, pager, cancellationToken);
             if (res.IsSuccess)
                 return Ok(res.Model);
             else
