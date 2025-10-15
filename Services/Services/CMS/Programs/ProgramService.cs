@@ -279,6 +279,8 @@ namespace Services.Services.CMS.Programs
                 .Include(x => x.SubmitterUser)
                 .Include(x => x.ProgramPractices)
                     .ThenInclude(pp => pp.Practice)
+                        .ThenInclude(p => p.MediaItems)
+                            .ThenInclude(mi => mi.GymFile)
                 .ProjectTo<ProgramDetailDto>(_mapper.ConfigurationProvider)
                 .FirstOrDefaultAsync(cancellationToken);
 
