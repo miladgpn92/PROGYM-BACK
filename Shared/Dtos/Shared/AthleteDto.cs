@@ -36,6 +36,7 @@ namespace SharedModels.Dtos.Shared
         public string Family { get; set; }
         public string PhoneNumber { get; set; }
         public Gender? Gender { get; set; }
+        public DateTime CreateDate { get; set; }
     }
 
     public class AthleteDetailDto : AthleteSelectDto
@@ -62,4 +63,3 @@ namespace SharedModels.Dtos.Shared
         public string ProgramTitle { get; set; }
     }
 }
-

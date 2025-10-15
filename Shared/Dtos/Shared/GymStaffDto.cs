@@ -49,6 +49,6 @@ namespace SharedModels.Dtos.Shared
         public string PhoneNumber { get; set; }
         public Gender? Gender { get; set; }
         public UsersRole Role { get; set; }
+        public System.DateTime CreateDate { get; set; }
     }
 }
-

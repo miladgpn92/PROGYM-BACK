@@ -134,7 +134,8 @@ namespace Services.Services.CMS.GymStaff
                             Family = u.Family,
                             PhoneNumber = u.PhoneNumber,
                             Gender = u.Gender,
-                            Role = gu.Role
+                            Role = gu.Role,
+                            CreateDate = u.CreateDate
                         };
 
             if (!string.IsNullOrWhiteSpace(search))
@@ -193,7 +194,8 @@ namespace Services.Services.CMS.GymStaff
                 Family = user.Family,
                 PhoneNumber = user.PhoneNumber,
                 Gender = user.Gender,
-                Role = member.Role
+                Role = member.Role,
+                CreateDate = user.CreateDate
             };
 
             return new ResponseModel<GymStaffSelectDto>(true, dto);

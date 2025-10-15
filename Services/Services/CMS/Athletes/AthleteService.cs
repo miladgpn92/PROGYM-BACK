@@ -139,7 +139,8 @@ namespace Services.Services.CMS.Athletes
                             Name = u.Name,
                             Family = u.Family,
                             PhoneNumber = u.PhoneNumber,
-                            Gender = u.Gender
+                            Gender = u.Gender,
+                            CreateDate = u.CreateDate
                         };
 
             if (!string.IsNullOrWhiteSpace(q))
@@ -236,6 +237,7 @@ namespace Services.Services.CMS.Athletes
                 Family = user.Family,
                 PhoneNumber = user.PhoneNumber,
                 Gender = user.Gender,
+                CreateDate = user.CreateDate,
                 AthleteData = await _athleteDataRepo.TableNoTracking
                     .Where(a => a.UserId == userId)
                     .OrderByDescending(a => a.SubmitDate)
