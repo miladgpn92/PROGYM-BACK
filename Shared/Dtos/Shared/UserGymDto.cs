@@ -17,6 +17,7 @@ namespace SharedModels.Dtos.Shared
         public int UserId { get; set; }
         public UsersRole Role { get; set; }
         public string GymTitle { get; set; }
+        public DateTime JoinDate { get; set; }
     }
     public class UserGymDtoMapping : IHaveCustomMapping
     {

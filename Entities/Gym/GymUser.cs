@@ -1,3 +1,4 @@
+using System;
 using Common.Consts;
 using Common.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -10,6 +11,7 @@ namespace Entities
         public int GymId { get; set; }
         public int UserId { get; set; }
         public UsersRole Role { get; set; }
+        public DateTime JoinDate { get; set; }
 
         public virtual Gym Gym { get; set; }
         public virtual ApplicationUser User { get; set; }
@@ -25,6 +27,9 @@ namespace Entities
                    .HasMaxLength(50)
                    .IsRequired();
 
+            builder.Property(x => x.JoinDate)
+                   .IsRequired();
+
             builder.HasOne(x => x.Gym)
                    .WithMany(g => g.GymUsers)
                    .HasForeignKey(x => x.GymId)
@@ -37,4 +42,3 @@ namespace Entities
         }
     }
 }
-

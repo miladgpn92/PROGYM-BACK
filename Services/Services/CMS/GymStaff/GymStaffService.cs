@@ -102,7 +102,8 @@ namespace Services.Services.CMS.GymStaff
                 {
                     GymId = gymId,
                     UserId = user.Id,
-                    Role = dto.Role
+                    Role = dto.Role,
+                    JoinDate = DateTime.Now
                 };
                 await _gymUserRepo.AddAsync(link, cancellationToken);
             }

@@ -102,7 +102,7 @@ namespace Services.Services.CMS.Athletes
                 .AnyAsync(gu => gu.GymId == gymId && gu.UserId == user.Id, cancellationToken);
             if (!existsInGym)
             {
-                var gu = new GymUser { GymId = gymId, UserId = user.Id, Role = UsersRole.athlete };
+                var gu = new GymUser { GymId = gymId, UserId = user.Id, Role = UsersRole.athlete, JoinDate = DateTime.Now };
                 await _gymUserRepo.AddAsync(gu, cancellationToken);
             }
 
@@ -140,7 +140,8 @@ namespace Services.Services.CMS.Athletes
                             Family = u.Family,
                             PhoneNumber = u.PhoneNumber,
                             Gender = u.Gender,
-                            CreateDate = u.CreateDate
+                            CreateDate = u.CreateDate,
+                            PicUrl = u.PicUrl
                         };
 
             if (!string.IsNullOrWhiteSpace(q))
@@ -238,6 +239,7 @@ namespace Services.Services.CMS.Athletes
                 PhoneNumber = user.PhoneNumber,
                 Gender = user.Gender,
                 CreateDate = user.CreateDate,
+                PicUrl = user.PicUrl,
                 AthleteData = await _athleteDataRepo.TableNoTracking
                     .Where(a => a.UserId == userId)
                     .OrderByDescending(a => a.SubmitDate)

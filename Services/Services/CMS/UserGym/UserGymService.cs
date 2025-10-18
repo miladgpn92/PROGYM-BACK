@@ -26,7 +26,11 @@ namespace Services.Services.CMS.UserGym
         public async Task<ResponseModel<List<UserGymDto>>> GetUserInfo(int UserId, CancellationToken cancellationToken)
         {
 
-            var res = await mainRepository.TableNoTracking.Include(a =>a.Gym).Where(a=>a.UserId == UserId).ToListAsync();
+            var res = await mainRepository.TableNoTracking
+                                          .Include(a => a.Gym)
+                                          .Where(a => a.UserId == UserId)
+                                          .OrderByDescending(a => a.JoinDate)
+                                          .ToListAsync(cancellationToken);
             if (res.Count > 0)
             { var data = mapper.Map<List<UserGymDto>>(res);
                 return new ResponseModel<List<UserGymDto>>(true, data);
