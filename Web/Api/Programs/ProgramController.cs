@@ -106,5 +106,16 @@ namespace Web.Api.Programs
             else
                 return BadRequest(res.Description);
         }
+
+        [HttpDelete("[action]")]
+        public async Task<IActionResult> DeAttachAthlete([FromQuery] int gymId, [FromQuery] int userProgramId, CancellationToken cancellationToken)
+        {
+            var userId = User.Identity.GetUserIdInt();
+            var res = await _service.DeAttachAthleteAsync(gymId, userId, userProgramId, cancellationToken);
+            if (res.IsSuccess)
+                return Ok();
+            else
+                return BadRequest(res.Description);
+        }
     }
 }

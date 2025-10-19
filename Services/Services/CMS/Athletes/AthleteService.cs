@@ -254,7 +254,7 @@ namespace Services.Services.CMS.Athletes
                 UserPrograms = await _userProgramRepo.TableNoTracking
                     .Where(up => up.UserId == userId)
                     .Include(up => up.Program)
-                    .OrderByDescending(up => up.StartDate)
+                    .OrderByDescending(up => up.Id)
                     .Select(up => new UserProgramBriefDto
                     {
                         Id = up.Id,

@@ -22,5 +22,10 @@ namespace Services.Services.CMS.Programs
             System.DateTime startDate,
             System.DateTime? endDate,
             CancellationToken cancellationToken);
+        Task<ResponseModel> DeAttachAthleteAsync(
+            int gymId,
+            int managerUserId,
+            int userProgramId,
+            CancellationToken cancellationToken);
     }
 }

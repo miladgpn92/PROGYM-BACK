@@ -182,6 +182,42 @@ namespace Services.Services.CMS.Programs
             return new ResponseModel(true, "");
         }
 
+        public async Task<ResponseModel> DeAttachAthleteAsync(
+            int gymId,
+            int managerUserId,
+            int userProgramId,
+            CancellationToken cancellationToken)
+        {
+            var managerHasAccess = await _gymUserRepo.TableNoTracking
+                .AnyAsync(g => g.GymId == gymId && g.UserId == managerUserId && g.Role == UsersRole.manager, cancellationToken);
+            if (!managerHasAccess)
+                return new ResponseModel(false, "Access denied");
+
+            var link = await _userProgramRepo.Table
+                .Include(up => up.Program)
+                .FirstOrDefaultAsync(up => up.Id == userProgramId, cancellationToken);
+            if (link == null)
+                return new ResponseModel(false, "Program not attached to athlete");
+
+            var athleteInGym = await _gymUserRepo.TableNoTracking
+                .AnyAsync(g => g.GymId == gymId && g.UserId == link.UserId, cancellationToken);
+            if (!athleteInGym)
+                return new ResponseModel(false, "Athlete not in gym");
+
+            var program = link.Program ?? await _programRepo.TableNoTracking.FirstOrDefaultAsync(p => p.Id == link.ProgramId, cancellationToken);
+            if (program == null)
+                return new ResponseModel(false, "Program not found");
+
+            var programInGym = (program.OwnerId.HasValue && await _gymUserRepo.TableNoTracking.AnyAsync(g => g.GymId == gymId && g.UserId == program.OwnerId.Value, cancellationToken))
+                || await _gymUserRepo.TableNoTracking.AnyAsync(g => g.GymId == gymId && g.UserId == program.SubmitterUserId, cancellationToken);
+            if (!programInGym)
+                return new ResponseModel(false, "Program not in gym");
+
+            await _userProgramRepo.DeleteAsync(link, cancellationToken);
+
+            return new ResponseModel(true, "");
+        }
+
         // practiceData is now strongly-typed via fields on ProgramPractice
 
         public async Task<ResponseModel> UpdateAsync(int gymId, int userId, int id, ProgramDto dto, CancellationToken cancellationToken)
