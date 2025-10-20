@@ -58,6 +58,7 @@ namespace Services.Services.CMS.Gym
 
             gym.ContactUsPhoneNumber = dto.ContactUsPhoneNumber;
             gym.Phone = dto.Phone;
+            gym.Address = dto.Address;
             gym.Lat = dto.Lat;
             gym.Lng = dto.Lng;
 

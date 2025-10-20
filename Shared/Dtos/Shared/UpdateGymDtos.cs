@@ -19,6 +19,9 @@ namespace SharedModels.Dtos.Shared
         [MaxLength(50)]
         public string Phone { get; set; }
 
+        [MaxLength(500)]
+        public string Address { get; set; }
+
         public double Lat { get; set; }
         public double Lng { get; set; }
     }
@@ -38,4 +41,3 @@ namespace SharedModels.Dtos.Shared
         public string BaleLink { get; set; }
     }
 }
-
