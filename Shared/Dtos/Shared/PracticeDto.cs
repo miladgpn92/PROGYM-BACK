@@ -18,6 +18,10 @@ namespace SharedModels.Dtos.Shared
         [MaxLength(200, ErrorMessageResourceName = "MaxLenMsg", ErrorMessageResourceType = typeof(ErrorMsg))]
         public string Name { get; set; }
 
+        [Display(Name = "English Title")]
+        [MaxLength(200, ErrorMessageResourceName = "MaxLenMsg", ErrorMessageResourceType = typeof(ErrorMsg))]
+        public string EnTitle { get; set; }
+
         [Display(Name = "Description")]
         public string Desc { get; set; }
 
@@ -33,6 +37,7 @@ namespace SharedModels.Dtos.Shared
     public class PracticeSelectDto : SimpleBaseDto<PracticeSelectDto, Practice>
     {
         public string Name { get; set; }
+        public string EnTitle { get; set; }
         public string Desc { get; set; }
         public int? PracticeCategoryId { get; set; }
         public string PracticeCategoryTitle { get; set; }

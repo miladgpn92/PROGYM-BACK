@@ -98,6 +98,7 @@ namespace Services.Services.CMS.Practices
 
             // Update allowed fields explicitly to avoid key modification
             entity.Name = dto.Name;
+            entity.EnTitle = dto.EnTitle;
             entity.Desc = dto.Desc;
 
             if (dto.PracticeCategoryId.HasValue)
@@ -165,7 +166,9 @@ namespace Services.Services.CMS.Practices
 
             var query = _practiceRepo.TableNoTracking;
             if (!string.IsNullOrWhiteSpace(q))
-                query = query.Where(x => x.Name.Contains(q));
+                query = query.Where(x =>
+                    x.Name.Contains(q) ||
+                    (x.EnTitle != null && x.EnTitle.Contains(q)));
 
             var ordered = query.OrderByDescending(x => x.Id);
             var totalCount = await ordered.CountAsync(cancellationToken);

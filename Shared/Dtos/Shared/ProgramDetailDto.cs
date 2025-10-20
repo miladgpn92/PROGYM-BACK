@@ -16,12 +16,14 @@ namespace SharedModels.Dtos.Shared
         public int? Duration { get; set; }
         public int? Rest { get; set; }
         public string PracticeName { get; set; }
+        public string PracticeEnTitle { get; set; }
         public IList<PracticeMediaSelectDto> Images { get; set; } = new List<PracticeMediaSelectDto>();
         public IList<PracticeMediaSelectDto> Videos { get; set; } = new List<PracticeMediaSelectDto>();
 
         public override void CustomMappings(AutoMapper.IMappingExpression<ProgramPractice, ProgramPracticeSelectDto> mapping)
         {
             mapping.ForMember(d => d.PracticeName, opt => opt.MapFrom(s => s.Practice.Name));
+            mapping.ForMember(d => d.PracticeEnTitle, opt => opt.MapFrom(s => s.Practice.EnTitle));
             mapping.ForMember(d => d.Images, opt => opt.MapFrom(s => s.Practice.MediaItems
                 .Where(m => m.MediaType == MediaFileType.Image)
                 .OrderBy(m => m.DisplayOrder)));

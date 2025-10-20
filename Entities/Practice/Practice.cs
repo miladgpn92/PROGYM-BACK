@@ -8,6 +8,7 @@ namespace Entities
     public class Practice : SimpleBaseEntity
     {
         public string Name { get; set; }
+        public string EnTitle { get; set; }
         public string Desc { get; set; }
         public int PracticeCategoryId { get; set; }
         public int UserId { get; set; }
@@ -27,6 +28,9 @@ namespace Entities
             builder.Property(x => x.Name)
                    .HasMaxLength(200)
                    .IsRequired();
+
+            builder.Property(x => x.EnTitle)
+                   .HasMaxLength(200);
 
             builder.Property(x => x.Desc)
                    .HasMaxLength(2000);
