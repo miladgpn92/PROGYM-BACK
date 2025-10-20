@@ -28,7 +28,7 @@ namespace Services.Services.CMS.GymStaff
         public async Task<ResponseModel<int>> CreateAsync(int gymId, int managerId, GymStaffCreateDto dto, CancellationToken cancellationToken)
         {
             if (!IsStaffRole(dto.Role))
-                return new ResponseModel<int>(false, 0, "Role must be manager or coach");
+                return new ResponseModel<int>(false, 0, "Role must be manager, coach, or staff");
 
             var hasAccess = await ManagerHasAccessAsync(gymId, managerId, cancellationToken);
             if (!hasAccess)
@@ -127,7 +127,7 @@ namespace Services.Services.CMS.GymStaff
 
             var query = from gu in _gymUserRepo.TableNoTracking
                         join u in _userManager.Users on gu.UserId equals u.Id
-                        where gu.GymId == gymId && (gu.Role == UsersRole.manager || gu.Role == UsersRole.coach)
+                        where gu.GymId == gymId && (gu.Role == UsersRole.manager || gu.Role == UsersRole.coach || gu.Role == UsersRole.staff)
                         select new GymStaffSelectDto
                         {
                             Id = u.Id,
@@ -177,7 +177,7 @@ namespace Services.Services.CMS.GymStaff
                 return new ResponseModel<GymStaffSelectDto>(false, null, "Unauthorized manager for this gym");
 
             var member = await _gymUserRepo.TableNoTracking
-                .Where(gu => gu.GymId == gymId && gu.UserId == userId && (gu.Role == UsersRole.manager || gu.Role == UsersRole.coach))
+                .Where(gu => gu.GymId == gymId && gu.UserId == userId && (gu.Role == UsersRole.manager || gu.Role == UsersRole.coach || gu.Role == UsersRole.staff))
                 .Select(gu => new { gu.Role })
                 .FirstOrDefaultAsync(cancellationToken);
 
@@ -205,13 +205,13 @@ namespace Services.Services.CMS.GymStaff
         public async Task<ResponseModel> UpdateAsync(int gymId, int managerId, int userId, GymStaffUpdateDto dto, CancellationToken cancellationToken)
         {
             if (!IsStaffRole(dto.Role))
-                return new ResponseModel(false, "Role must be manager or coach");
+                return new ResponseModel(false, "Role must be manager, coach, or staff");
 
             var hasAccess = await ManagerHasAccessAsync(gymId, managerId, cancellationToken);
             if (!hasAccess)
                 return new ResponseModel(false, "Unauthorized manager for this gym");
 
-            var link = await _gymUserRepo.Table.FirstOrDefaultAsync(gu => gu.GymId == gymId && gu.UserId == userId && (gu.Role == UsersRole.manager || gu.Role == UsersRole.coach), cancellationToken);
+            var link = await _gymUserRepo.Table.FirstOrDefaultAsync(gu => gu.GymId == gymId && gu.UserId == userId && (gu.Role == UsersRole.manager || gu.Role == UsersRole.coach || gu.Role == UsersRole.staff), cancellationToken);
             if (link == null)
                 return new ResponseModel(false, "Staff member not found in this gym");
 
@@ -266,7 +266,7 @@ namespace Services.Services.CMS.GymStaff
             var link = await _gymUserRepo.Table.FirstOrDefaultAsync(gu =>
                 gu.GymId == gymId &&
                 gu.UserId == userId &&
-                (gu.Role == UsersRole.manager || gu.Role == UsersRole.coach),
+                (gu.Role == UsersRole.manager || gu.Role == UsersRole.coach || gu.Role == UsersRole.staff),
                 cancellationToken);
 
             if (link == null)
@@ -285,7 +285,7 @@ namespace Services.Services.CMS.GymStaff
         }
 
         private static bool IsStaffRole(UsersRole role) =>
-            role == UsersRole.manager || role == UsersRole.coach;
+            role == UsersRole.manager || role == UsersRole.coach || role == UsersRole.staff;
 
         private async Task EnsureRoleAsync(ApplicationUser user, UsersRole role)
         {

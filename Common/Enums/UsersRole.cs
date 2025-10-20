@@ -20,7 +20,9 @@ namespace Common.Enums
         [Display(Name = "مربی")]
         coach =4,              
         [Display(Name = "ورزشکار")]
-        athlete =5
+        athlete =5,
+        [Display(Name = "Staff", ResourceType = typeof(ResourceLibrary.Panel.Admin.Users.Users))]
+        staff =6
     }
 
 }

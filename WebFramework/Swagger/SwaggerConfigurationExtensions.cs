@@ -80,6 +80,7 @@ namespace WebFramework.Swagger
                 // 🔹 تعریف چند Swagger Doc برای هر گروه نقش
                 options.SwaggerDoc(RoleConsts.Manager, new OpenApiInfo { Title = "Manager APIs", Version = "v1" });
                 options.SwaggerDoc(RoleConsts.Coach, new OpenApiInfo { Title = "Coach APIs", Version = "v1" });
+                options.SwaggerDoc(RoleConsts.Staff, new OpenApiInfo { Title = "Staff APIs", Version = "v1" });
                 options.SwaggerDoc(RoleConsts.Athlete, new OpenApiInfo { Title = "Athlete APIs", Version = "v1" });
                 options.SwaggerDoc(RoleConsts.Admin, new OpenApiInfo { Title = "Admin APIs", Version = "v1" });
                 options.SwaggerDoc("Common", new OpenApiInfo { Title = "Common APIs", Version = "v1" });
@@ -139,6 +140,7 @@ namespace WebFramework.Swagger
             {
                 options.SwaggerEndpoint($"/swagger/{RoleConsts.Manager}/swagger.json", $"{RoleConsts.Manager}");
                 options.SwaggerEndpoint($"/swagger/{RoleConsts.Coach}/swagger.json", $"{RoleConsts.Coach}");
+                options.SwaggerEndpoint($"/swagger/{RoleConsts.Staff}/swagger.json", $"{RoleConsts.Staff}");
                 options.SwaggerEndpoint($"/swagger/{RoleConsts.Athlete}/swagger.json", $"{RoleConsts.Athlete}");
                 options.SwaggerEndpoint($"/swagger/{RoleConsts.Admin}/swagger.json", $"{RoleConsts.Admin}");
                 options.SwaggerEndpoint($"/swagger/Common/swagger.json", $"Common");

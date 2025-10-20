@@ -122,5 +122,14 @@ namespace ResourceLibrary.Panel.Admin.Users {
                 return ResourceManager.GetString("User", resourceCulture);
             }
         }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Staff.
+        /// </summary>
+        public static string Staff {
+            get {
+                return ResourceManager.GetString("Staff", resourceCulture);
+            }
+        }
     }
 }
