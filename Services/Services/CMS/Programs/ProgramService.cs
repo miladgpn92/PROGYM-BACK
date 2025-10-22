@@ -7,6 +7,7 @@ using Data.Repositories;
 using Entities;
 using Microsoft.EntityFrameworkCore;
 using SharedModels.Dtos.Shared;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -17,26 +18,26 @@ namespace Services.Services.CMS.Programs
     public class ProgramService : IScopedDependency, IProgramService
     {
         private readonly IRepository<Entities.Program> _programRepo;
+        private readonly IRepository<ProgramRoutineItem> _programRoutineItemRepo;
         private readonly IRepository<ProgramPractice> _programPracticeRepo;
         private readonly IRepository<UserProgram> _userProgramRepo;
         private readonly IRepository<GymUser> _gymUserRepo;
-        private readonly IRepository<ApplicationUser> _userRepo;
         private readonly IRepository<Entities.Practice> _practiceRepo;
         private readonly IMapper _mapper;
 
         public ProgramService(
             IRepository<Entities.Program> programRepo,
+            IRepository<ProgramRoutineItem> programRoutineItemRepo,
             IRepository<ProgramPractice> programPracticeRepo,
             IRepository<GymUser> gymUserRepo,
-            IRepository<ApplicationUser> userRepo,
             IRepository<Entities.Practice> practiceRepo,
             IRepository<UserProgram> userProgramRepo,
             IMapper mapper)
         {
             _programRepo = programRepo;
+            _programRoutineItemRepo = programRoutineItemRepo;
             _programPracticeRepo = programPracticeRepo;
             _gymUserRepo = gymUserRepo;
-            _userRepo = userRepo;
             _practiceRepo = practiceRepo;
             _userProgramRepo = userProgramRepo;
             _mapper = mapper;
@@ -57,56 +58,63 @@ namespace Services.Services.CMS.Programs
                     return new ResponseModel<ProgramSelectDto>(false, null, "Owner not found in current gym");
             }
 
-            // optional: validate practices existence
-            if (dto.Practices != null && dto.Practices.Count > 0)
-            {
-                var practiceIds = dto.Practices.Where(p => p.PracticeId.HasValue).Select(p => p.PracticeId.Value).Distinct().ToList();
-                var existsCount = await _practiceRepo.TableNoTracking.CountAsync(p => practiceIds.Contains(p.Id), cancellationToken);
-                if (existsCount != practiceIds.Count)
-                    return new ResponseModel<ProgramSelectDto>(false, null, "One or more practices are invalid");
-            }
+            var routineInputs = dto.Practices ?? new List<ProgramRoutineItemInputDto>();
+            var (isValid, validationMessage, plans) = await PrepareRoutinePlansAsync(routineInputs, cancellationToken);
+            if (!isValid)
+                return new ResponseModel<ProgramSelectDto>(false, null, validationMessage);
 
-            var entity = dto.ToEntity(_mapper);
-            entity.SubmitterUserId = userId;
-            entity.OwnerId = ownerId; // may be null for Global programs
-            // compute CountOfPractice strictly from provided practices before save
-            entity.CountOfPractice = dto.Practices?.Count ?? 0;
-            entity.CreateDate = System.DateTime.Now;
+            var entity = new Entities.Program
+            {
+                Title = dto.Title,
+                Type = dto.Type,
+                OwnerId = ownerId,
+                SubmitterUserId = userId,
+                CreateDate = DateTime.Now,
+                CountOfPractice = plans.Sum(p => p.Practices.Count)
+            };
 
             await _programRepo.AddAsync(entity, cancellationToken);
 
-            if (dto.Practices != null && dto.Practices.Count > 0)
+            if (plans.Count > 0)
             {
-                foreach (var p in dto.Practices)
+                var routineEntities = plans.Select(plan => new ProgramRoutineItem
                 {
-                    // Validate typed data based on practice type
-                    if (p.Type == PracticeType.Set)
-                    {
-                        if (!p.SetCount.HasValue || !p.MovementCount.HasValue || !p.Rest.HasValue)
-                            return new ResponseModel<ProgramSelectDto>(false, null, "Invalid practice data for Set: require setCount, movementCount, rest");
-                        if (p.SetCount <= 0 || p.MovementCount <= 0 || p.Rest < 0)
-                            return new ResponseModel<ProgramSelectDto>(false, null, "Invalid values for Set");
-                    }
-                    else if (p.Type == PracticeType.Time)
-                    {
-                        if (!p.Duration.HasValue || !p.Rest.HasValue)
-                            return new ResponseModel<ProgramSelectDto>(false, null, "Invalid practice data for Time: require duration, rest");
-                        if (p.Duration <= 0 || p.Rest < 0)
-                            return new ResponseModel<ProgramSelectDto>(false, null, "Invalid values for Time");
-                    }
+                    ProgramId = entity.Id,
+                    ItemType = plan.ItemType,
+                    DisplayOrder = plan.DisplayOrder,
+                    Title = plan.Title,
+                    RepeatCount = plan.RepeatCount,
+                    RestBetweenRepeats = plan.RestBetweenRepeats,
+                    Notes = plan.Notes
+                }).ToList();
 
-                    var pp = new ProgramPractice
+                await _programRoutineItemRepo.AddRangeAsync(routineEntities, cancellationToken);
+
+                var practiceEntities = new List<ProgramPractice>();
+                for (int i = 0; i < plans.Count; i++)
+                {
+                    var plan = plans[i];
+                    var routineEntity = routineEntities[i];
+                    foreach (var practice in plan.Practices)
                     {
-                        ProgramId = entity.Id,
-                        PracticeId = p.PracticeId ?? 0,
-                        Type = p.Type,
-                        SetCount = p.Type == PracticeType.Set ? p.SetCount : null,
-                        MovementCount = p.Type == PracticeType.Set ? p.MovementCount : null,
-                        Duration = p.Type == PracticeType.Time ? p.Duration : null,
-                        Rest = p.Rest
-                    };
-                    await _programPracticeRepo.AddAsync(pp, cancellationToken);
+                        practiceEntities.Add(new ProgramPractice
+                        {
+                            ProgramId = entity.Id,
+                            ProgramRoutineItemId = routineEntity.Id,
+                            PracticeId = practice.PracticeId,
+                            Type = practice.Type,
+                            SetCount = practice.Type == PracticeType.Set ? practice.SetCount : null,
+                            MovementCount = practice.Type == PracticeType.Set ? practice.MovementCount : null,
+                            Duration = practice.Type == PracticeType.Time ? practice.Duration : null,
+                            Rest = practice.Rest,
+                            InternalOrder = practice.InternalOrder,
+                            Notes = practice.Notes
+                        });
+                    }
                 }
+
+                if (practiceEntities.Count > 0)
+                    await _programPracticeRepo.AddRangeAsync(practiceEntities, cancellationToken);
             }
 
             var model = await _programRepo.TableNoTracking
@@ -119,107 +127,6 @@ namespace Services.Services.CMS.Programs
             return new ResponseModel<ProgramSelectDto>(true, model);
         }
 
-        public async Task<ResponseModel> DeletePracticeAsync(int gymId, int userId, int programPracticeId, CancellationToken cancellationToken)
-        {
-            var hasAccess = await _gymUserRepo.TableNoTracking
-                .AnyAsync(gu => gu.GymId == gymId && gu.UserId == userId && gu.Role == UsersRole.manager, cancellationToken);
-            if (!hasAccess)
-                return new ResponseModel(false, "Access denied");
-
-            var pp = await _programPracticeRepo.Table.FirstOrDefaultAsync(x => x.Id == programPracticeId, cancellationToken);
-            if (pp == null)
-                return new ResponseModel(false, "Not found");
-
-            await _programPracticeRepo.DeleteAsync(pp, cancellationToken);
-            return new ResponseModel(true, "");
-        }
-
-        public async Task<ResponseModel> AttachToAthleteAsync(
-            int gymId,
-            int managerUserId,
-            int programId,
-            int athleteUserId,
-            System.DateTime startDate,
-            System.DateTime? endDate,
-            CancellationToken cancellationToken)
-        {
-            // 1) Manager must have access to gym as manager
-            var managerHasAccess = await _gymUserRepo.TableNoTracking
-                .AnyAsync(g => g.GymId == gymId && g.UserId == managerUserId && g.Role == UsersRole.manager, cancellationToken);
-            if (!managerHasAccess)
-                return new ResponseModel(false, "Access denied");
-
-            // 2) Athlete must belong to gym
-            var athleteInGym = await _gymUserRepo.TableNoTracking
-                .AnyAsync(g => g.GymId == gymId && g.UserId == athleteUserId, cancellationToken);
-            if (!athleteInGym)
-                return new ResponseModel(false, "Athlete not in gym");
-
-            // 3) Program must belong to gym by owner or submitter membership
-            var program = await _programRepo.TableNoTracking.FirstOrDefaultAsync(p => p.Id == programId, cancellationToken);
-            if (program == null)
-                return new ResponseModel(false, "Program not found");
-
-            var programInGym = (program.OwnerId.HasValue && await _gymUserRepo.TableNoTracking.AnyAsync(g => g.GymId == gymId && g.UserId == program.OwnerId.Value, cancellationToken))
-                || await _gymUserRepo.TableNoTracking.AnyAsync(g => g.GymId == gymId && g.UserId == program.SubmitterUserId, cancellationToken);
-            if (!programInGym)
-                return new ResponseModel(false, "Program not in gym");
-
-            // 4) Validate dates
-            if (endDate.HasValue && endDate.Value <= startDate)
-                return new ResponseModel(false, "EndDate must be after StartDate");
-
-            // 5) Create link
-            var link = new UserProgram
-            {
-                UserId = athleteUserId,
-                ProgramId = programId,
-                StartDate = startDate,
-                EndDate = endDate
-            };
-            await _userProgramRepo.AddAsync(link, cancellationToken);
-
-            return new ResponseModel(true, "");
-        }
-
-        public async Task<ResponseModel> DeAttachAthleteAsync(
-            int gymId,
-            int managerUserId,
-            int userProgramId,
-            CancellationToken cancellationToken)
-        {
-            var managerHasAccess = await _gymUserRepo.TableNoTracking
-                .AnyAsync(g => g.GymId == gymId && g.UserId == managerUserId && g.Role == UsersRole.manager, cancellationToken);
-            if (!managerHasAccess)
-                return new ResponseModel(false, "Access denied");
-
-            var link = await _userProgramRepo.Table
-                .Include(up => up.Program)
-                .FirstOrDefaultAsync(up => up.Id == userProgramId, cancellationToken);
-            if (link == null)
-                return new ResponseModel(false, "Program not attached to athlete");
-
-            var athleteInGym = await _gymUserRepo.TableNoTracking
-                .AnyAsync(g => g.GymId == gymId && g.UserId == link.UserId, cancellationToken);
-            if (!athleteInGym)
-                return new ResponseModel(false, "Athlete not in gym");
-
-            var program = link.Program ?? await _programRepo.TableNoTracking.FirstOrDefaultAsync(p => p.Id == link.ProgramId, cancellationToken);
-            if (program == null)
-                return new ResponseModel(false, "Program not found");
-
-            var programInGym = (program.OwnerId.HasValue && await _gymUserRepo.TableNoTracking.AnyAsync(g => g.GymId == gymId && g.UserId == program.OwnerId.Value, cancellationToken))
-                || await _gymUserRepo.TableNoTracking.AnyAsync(g => g.GymId == gymId && g.UserId == program.SubmitterUserId, cancellationToken);
-            if (!programInGym)
-                return new ResponseModel(false, "Program not in gym");
-
-            await _userProgramRepo.DeleteAsync(link, cancellationToken);
-
-            return new ResponseModel(true, "");
-        }
-
-        // practiceData is now strongly-typed via fields on ProgramPractice
-
         public async Task<ResponseModel> UpdateAsync(int gymId, int userId, int id, ProgramDto dto, CancellationToken cancellationToken)
         {
             var hasAccess = await _gymUserRepo.TableNoTracking
@@ -227,25 +134,93 @@ namespace Services.Services.CMS.Programs
             if (!hasAccess)
                 return new ResponseModel(false, "Access denied");
 
-            var entity = await _programRepo.Table.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+            var entity = await _programRepo.Table
+                .Include(x => x.ProgramRoutineItems)
+                    .ThenInclude(ri => ri.ProgramPractices)
+                .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
             if (entity == null)
                 return new ResponseModel(false, "Not found");
 
-            entity.Title = dto.Title;
-            entity.Type = dto.Type;
-            // recompute CountOfPractice from current relations
-            entity.CountOfPractice = await _programPracticeRepo.TableNoTracking.CountAsync(x => x.ProgramId == entity.Id, cancellationToken);
-
-            if (dto.OwnerId.HasValue)
+            int? ownerId = dto.OwnerId;
+            if (ownerId.HasValue)
             {
-                var newOwnerId = dto.OwnerId.Value;
-                if (newOwnerId != entity.OwnerId)
+                if (ownerId.Value != entity.OwnerId)
                 {
-                    var ownerInGym = await _gymUserRepo.TableNoTracking.AnyAsync(x => x.GymId == gymId && x.UserId == newOwnerId, cancellationToken);
+                    var ownerInGym = await _gymUserRepo.TableNoTracking.AnyAsync(x => x.GymId == gymId && x.UserId == ownerId.Value, cancellationToken);
                     if (!ownerInGym)
                         return new ResponseModel(false, "Owner not found in current gym");
-                    entity.OwnerId = newOwnerId;
+                    entity.OwnerId = ownerId.Value;
                 }
+            }
+            else
+            {
+                entity.OwnerId = null;
+            }
+
+            entity.Title = dto.Title;
+            entity.Type = dto.Type;
+
+            if (dto.Practices != null)
+            {
+                var (isValid, validationMessage, plans) = await PrepareRoutinePlansAsync(dto.Practices, cancellationToken);
+                if (!isValid)
+                    return new ResponseModel(false, validationMessage);
+
+                entity.CountOfPractice = plans.Sum(p => p.Practices.Count);
+
+                var existingPractices = entity.ProgramRoutineItems.SelectMany(ri => ri.ProgramPractices).ToList();
+                if (existingPractices.Count > 0)
+                    await _programPracticeRepo.DeleteRangeAsync(existingPractices, cancellationToken);
+
+                var existingRoutineItems = entity.ProgramRoutineItems.ToList();
+                if (existingRoutineItems.Count > 0)
+                    await _programRoutineItemRepo.DeleteRangeAsync(existingRoutineItems, cancellationToken);
+
+                if (plans.Count > 0)
+                {
+                    var routineEntities = plans.Select(plan => new ProgramRoutineItem
+                    {
+                        ProgramId = entity.Id,
+                        ItemType = plan.ItemType,
+                        DisplayOrder = plan.DisplayOrder,
+                        Title = plan.Title,
+                        RepeatCount = plan.RepeatCount,
+                        RestBetweenRepeats = plan.RestBetweenRepeats,
+                        Notes = plan.Notes
+                    }).ToList();
+
+                    await _programRoutineItemRepo.AddRangeAsync(routineEntities, cancellationToken);
+
+                    var practiceEntities = new List<ProgramPractice>();
+                    for (int i = 0; i < plans.Count; i++)
+                    {
+                        var plan = plans[i];
+                        var routineEntity = routineEntities[i];
+                        foreach (var practice in plan.Practices)
+                        {
+                            practiceEntities.Add(new ProgramPractice
+                            {
+                                ProgramId = entity.Id,
+                                ProgramRoutineItemId = routineEntity.Id,
+                                PracticeId = practice.PracticeId,
+                                Type = practice.Type,
+                                SetCount = practice.Type == PracticeType.Set ? practice.SetCount : null,
+                                MovementCount = practice.Type == PracticeType.Set ? practice.MovementCount : null,
+                                Duration = practice.Type == PracticeType.Time ? practice.Duration : null,
+                                Rest = practice.Rest,
+                                InternalOrder = practice.InternalOrder,
+                                Notes = practice.Notes
+                            });
+                        }
+                    }
+
+                    if (practiceEntities.Count > 0)
+                        await _programPracticeRepo.AddRangeAsync(practiceEntities, cancellationToken);
+                }
+            }
+            else
+            {
+                entity.CountOfPractice = await _programPracticeRepo.TableNoTracking.CountAsync(x => x.ProgramId == entity.Id, cancellationToken);
             }
 
             await _programRepo.UpdateAsync(entity, cancellationToken);
@@ -264,6 +239,150 @@ namespace Services.Services.CMS.Programs
                 return new ResponseModel(false, "Not found");
 
             await _programRepo.DeleteAsync(entity, cancellationToken);
+            return new ResponseModel(true, "");
+        }
+
+        public async Task<ResponseModel> DeleteRoutineItemAsync(int gymId, int userId, int routineItemId, CancellationToken cancellationToken)
+        {
+            var hasAccess = await _gymUserRepo.TableNoTracking
+                .AnyAsync(gu => gu.GymId == gymId && gu.UserId == userId && gu.Role == UsersRole.manager, cancellationToken);
+            if (!hasAccess)
+                return new ResponseModel(false, "Access denied");
+
+            var routineItem = await _programRoutineItemRepo.Table
+                .Include(ri => ri.Program)
+                .Include(ri => ri.ProgramPractices)
+                .FirstOrDefaultAsync(ri => ri.Id == routineItemId, cancellationToken);
+            if (routineItem == null)
+                return new ResponseModel(false, "Not found");
+
+            var practices = routineItem.ProgramPractices.ToList();
+            if (practices.Count > 0)
+                await _programPracticeRepo.DeleteRangeAsync(practices, cancellationToken);
+
+            await _programRoutineItemRepo.DeleteAsync(routineItem, cancellationToken);
+
+            var program = routineItem.Program;
+            if (program != null)
+            {
+                program.CountOfPractice = await _programPracticeRepo.TableNoTracking.CountAsync(x => x.ProgramId == program.Id, cancellationToken);
+                await _programRepo.UpdateAsync(program, cancellationToken);
+            }
+
+            return new ResponseModel(true, "");
+        }
+
+        public async Task<ResponseModel> ReorderRoutineItemsAsync(int gymId, int userId, int programId, ProgramRoutineItemReorderDto dto, CancellationToken cancellationToken)
+        {
+            var hasAccess = await _gymUserRepo.TableNoTracking
+                .AnyAsync(gu => gu.GymId == gymId && gu.UserId == userId && gu.Role == UsersRole.manager, cancellationToken);
+            if (!hasAccess)
+                return new ResponseModel(false, "Access denied");
+
+            if (dto.ProgramId != programId)
+                return new ResponseModel(false, "Program mismatch");
+
+            var program = await _programRepo.Table
+                .Include(p => p.ProgramRoutineItems)
+                .FirstOrDefaultAsync(p => p.Id == programId, cancellationToken);
+            if (program == null)
+                return new ResponseModel(false, "Program not found");
+
+            if (dto.Items == null || dto.Items.Count == 0)
+                return new ResponseModel(false, "No routine items provided");
+
+            if (dto.Items.Count != program.ProgramRoutineItems.Count)
+                return new ResponseModel(false, "Routine item count mismatch");
+
+            var lookup = program.ProgramRoutineItems.ToDictionary(x => x.Id);
+            foreach (var item in dto.Items)
+            {
+                if (!lookup.TryGetValue(item.RoutineItemId, out var routineItem))
+                    return new ResponseModel(false, $"Routine item {item.RoutineItemId} not found in program");
+
+                routineItem.DisplayOrder = item.DisplayOrder;
+            }
+
+            var ordered = program.ProgramRoutineItems
+                .OrderBy(x => x.DisplayOrder)
+                .ToList();
+
+            for (int i = 0; i < ordered.Count; i++)
+                ordered[i].DisplayOrder = i + 1;
+
+            await _programRoutineItemRepo.UpdateRangeAsync(ordered, cancellationToken);
+            return new ResponseModel(true, "");
+        }
+
+        public async Task<ResponseModel> ReorderSupersetPracticesAsync(int gymId, int userId, ProgramSupersetPracticeReorderDto dto, CancellationToken cancellationToken)
+        {
+            var hasAccess = await _gymUserRepo.TableNoTracking
+                .AnyAsync(gu => gu.GymId == gymId && gu.UserId == userId && gu.Role == UsersRole.manager, cancellationToken);
+            if (!hasAccess)
+                return new ResponseModel(false, "Access denied");
+
+            var routineItem = await _programRoutineItemRepo.Table
+                .Include(ri => ri.ProgramPractices)
+                .FirstOrDefaultAsync(ri => ri.Id == dto.RoutineItemId, cancellationToken);
+            if (routineItem == null)
+                return new ResponseModel(false, "Routine item not found");
+
+            if (routineItem.ItemType != ProgramRoutineItemType.Superset)
+                return new ResponseModel(false, "Reordering movements is only supported for supersets");
+
+            if (dto.Practices == null || dto.Practices.Count == 0)
+                return new ResponseModel(false, "No practices provided");
+
+            if (dto.Practices.Count != routineItem.ProgramPractices.Count)
+                return new ResponseModel(false, "Practice count mismatch");
+
+            var lookup = routineItem.ProgramPractices.ToDictionary(x => x.Id);
+            foreach (var practiceOrder in dto.Practices)
+            {
+                if (!lookup.TryGetValue(practiceOrder.ProgramPracticeId, out var practice))
+                    return new ResponseModel(false, $"Practice {practiceOrder.ProgramPracticeId} not found in routine item");
+
+                practice.InternalOrder = practiceOrder.InternalOrder;
+            }
+
+            var ordered = routineItem.ProgramPractices
+                .OrderBy(p => p.InternalOrder)
+                .ToList();
+
+            for (int i = 0; i < ordered.Count; i++)
+                ordered[i].InternalOrder = i + 1;
+
+            await _programPracticeRepo.UpdateRangeAsync(ordered, cancellationToken);
+            return new ResponseModel(true, "");
+        }
+
+        public async Task<ResponseModel> UpdateRoutineItemMetadataAsync(int gymId, int userId, ProgramRoutineItemMetadataDto dto, CancellationToken cancellationToken)
+        {
+            var hasAccess = await _gymUserRepo.TableNoTracking
+                .AnyAsync(gu => gu.GymId == gymId && gu.UserId == userId && gu.Role == UsersRole.manager, cancellationToken);
+            if (!hasAccess)
+                return new ResponseModel(false, "Access denied");
+
+            var routineItem = await _programRoutineItemRepo.Table.FirstOrDefaultAsync(ri => ri.Id == dto.RoutineItemId, cancellationToken);
+            if (routineItem == null)
+                return new ResponseModel(false, "Routine item not found");
+
+            if (routineItem.ItemType == ProgramRoutineItemType.Superset)
+            {
+                if (string.IsNullOrWhiteSpace(dto.Title))
+                    return new ResponseModel(false, "Superset title is required");
+                if (!dto.RepeatCount.HasValue || dto.RepeatCount.Value <= 0)
+                    return new ResponseModel(false, "Superset repeat count must be greater than zero");
+                if (!dto.RestBetweenRepeats.HasValue || dto.RestBetweenRepeats.Value < 0)
+                    return new ResponseModel(false, "Superset rest between repeats must be zero or positive");
+            }
+
+            routineItem.Title = dto.Title?.Trim();
+            routineItem.RepeatCount = dto.RepeatCount;
+            routineItem.RestBetweenRepeats = dto.RestBetweenRepeats;
+            routineItem.Notes = dto.Notes?.Trim();
+
+            await _programRoutineItemRepo.UpdateAsync(routineItem, cancellationToken);
             return new ResponseModel(true, "");
         }
 
@@ -313,10 +432,11 @@ namespace Services.Services.CMS.Programs
                 .Where(x => x.Id == id)
                 .Include(x => x.Owner)
                 .Include(x => x.SubmitterUser)
-                .Include(x => x.ProgramPractices)
-                    .ThenInclude(pp => pp.Practice)
-                        .ThenInclude(p => p.MediaItems)
-                            .ThenInclude(mi => mi.GymFile)
+                .Include(x => x.ProgramRoutineItems)
+                    .ThenInclude(ri => ri.ProgramPractices)
+                        .ThenInclude(pp => pp.Practice)
+                            .ThenInclude(p => p.MediaItems)
+                                .ThenInclude(mi => mi.GymFile)
                 .ProjectTo<ProgramDetailDto>(_mapper.ConfigurationProvider)
                 .FirstOrDefaultAsync(cancellationToken);
 
@@ -324,6 +444,257 @@ namespace Services.Services.CMS.Programs
                 return new ResponseModel<ProgramDetailDto>(false, null, "Not found");
 
             return new ResponseModel<ProgramDetailDto>(true, item);
+        }
+
+        public async Task<ResponseModel> AttachToAthleteAsync(
+            int gymId,
+            int managerUserId,
+            int programId,
+            int athleteUserId,
+            DateTime startDate,
+            DateTime? endDate,
+            CancellationToken cancellationToken)
+        {
+            var managerHasAccess = await _gymUserRepo.TableNoTracking
+                .AnyAsync(g => g.GymId == gymId && g.UserId == managerUserId && g.Role == UsersRole.manager, cancellationToken);
+            if (!managerHasAccess)
+                return new ResponseModel(false, "Access denied");
+
+            var program = await _programRepo.TableNoTracking.FirstOrDefaultAsync(p => p.Id == programId, cancellationToken);
+            if (program == null)
+                return new ResponseModel(false, "Program not found");
+
+            var athleteInGym = await _gymUserRepo.TableNoTracking
+                .AnyAsync(g => g.GymId == gymId && g.UserId == athleteUserId, cancellationToken);
+            if (!athleteInGym)
+                return new ResponseModel(false, "Athlete is not a member of the current gym");
+
+            var existing = await _userProgramRepo.TableNoTracking
+                .FirstOrDefaultAsync(up => up.ProgramId == programId && up.UserId == athleteUserId, cancellationToken);
+            if (existing != null)
+                return new ResponseModel(false, "Program is already attached to athlete");
+
+            var entity = new UserProgram
+            {
+                ProgramId = programId,
+                UserId = athleteUserId,
+                StartDate = startDate,
+                EndDate = endDate
+            };
+
+            await _userProgramRepo.AddAsync(entity, cancellationToken);
+            return new ResponseModel(true, "");
+        }
+
+        public async Task<ResponseModel> DeAttachAthleteAsync(
+            int gymId,
+            int managerUserId,
+            int userProgramId,
+            CancellationToken cancellationToken)
+        {
+            var managerHasAccess = await _gymUserRepo.TableNoTracking
+                .AnyAsync(g => g.GymId == gymId && g.UserId == managerUserId && g.Role == UsersRole.manager, cancellationToken);
+            if (!managerHasAccess)
+                return new ResponseModel(false, "Access denied");
+
+            var userProgram = await _userProgramRepo.Table.FirstOrDefaultAsync(up => up.Id == userProgramId, cancellationToken);
+            if (userProgram == null)
+                return new ResponseModel(false, "Not found");
+
+            await _userProgramRepo.DeleteAsync(userProgram, cancellationToken);
+            return new ResponseModel(true, "");
+        }
+
+        private async Task<(bool Success, string Error, List<RoutineItemPlan> Plans)> PrepareRoutinePlansAsync(
+            List<ProgramRoutineItemInputDto> routineInputs,
+            CancellationToken cancellationToken)
+        {
+            var plans = new List<RoutineItemPlan>();
+
+            if (routineInputs == null || routineInputs.Count == 0)
+                return (true, string.Empty, plans);
+
+            var practiceIds = new HashSet<int>();
+            var normalizedPlans = new List<RoutineItemPlan>();
+            int fallbackDisplayOrder = 1;
+
+            foreach (var item in routineInputs)
+            {
+                if (item == null)
+                    return (false, "Routine item payload is required", null);
+
+                var plan = new RoutineItemPlan
+                {
+                    ItemType = item.ItemType,
+                    Title = item.Title?.Trim(),
+                    RepeatCount = item.RepeatCount,
+                    RestBetweenRepeats = item.RestBetweenRepeats,
+                    Notes = item.Notes?.Trim(),
+                    DisplayOrder = item.DisplayOrder ?? fallbackDisplayOrder++
+                };
+
+                if (item.ItemType == ProgramRoutineItemType.Single)
+                {
+                    if (item.Practices == null || item.Practices.Count != 1)
+                        return (false, "Single routine items must include exactly one movement", null);
+                }
+                else if (item.ItemType == ProgramRoutineItemType.Superset)
+                {
+                    if (item.Practices == null || item.Practices.Count < 2)
+                        return (false, "Superset routine items must include at least two movements", null);
+                    if (string.IsNullOrWhiteSpace(plan.Title))
+                        return (false, "Superset title is required", null);
+                    if (!plan.RepeatCount.HasValue || plan.RepeatCount.Value <= 0)
+                        return (false, "Superset repeat count must be greater than zero", null);
+                    if (!plan.RestBetweenRepeats.HasValue || plan.RestBetweenRepeats.Value < 0)
+                        return (false, "Superset rest between repeats must be zero or positive", null);
+                }
+                else
+                {
+                    return (false, "Invalid routine item type", null);
+                }
+
+                var practicePlans = new List<PracticePlan>();
+                int fallbackInternalOrder = 1;
+                foreach (var practiceDto in item.Practices ?? new List<ProgramPracticeInputDto>())
+                {
+                    if (!TryValidatePractice(practiceDto, out var validationError))
+                        return (false, validationError, null);
+
+                    var internalOrder = practiceDto.InternalOrder ?? fallbackInternalOrder++;
+                    var practicePlan = new PracticePlan
+                    {
+                        PracticeId = practiceDto.PracticeId.Value,
+                        Type = practiceDto.Type,
+                        SetCount = practiceDto.SetCount,
+                        MovementCount = practiceDto.MovementCount,
+                        Duration = practiceDto.Duration,
+                        Rest = practiceDto.Rest,
+                        InternalOrder = internalOrder,
+                        Notes = practiceDto.Notes?.Trim()
+                    };
+
+                    practicePlans.Add(practicePlan);
+                    practiceIds.Add(practicePlan.PracticeId);
+                }
+
+                if (practicePlans.Count == 0)
+                    return (false, "Routine items require at least one movement", null);
+
+                var orderedPractices = practicePlans
+                    .OrderBy(p => p.InternalOrder)
+                    .Select((p, index) =>
+                    {
+                        p.InternalOrder = index + 1;
+                        return p;
+                    })
+                    .ToList();
+
+                plan.Practices = orderedPractices;
+                normalizedPlans.Add(plan);
+            }
+
+            var orderedPlans = normalizedPlans
+                .OrderBy(p => p.DisplayOrder)
+                .Select((p, index) =>
+                {
+                    p.DisplayOrder = index + 1;
+                    return p;
+                })
+                .ToList();
+
+            var existsCount = await _practiceRepo.TableNoTracking
+                .CountAsync(p => practiceIds.Contains(p.Id), cancellationToken);
+
+            if (existsCount != practiceIds.Count)
+                return (false, "One or more practices are invalid", null);
+
+            return (true, string.Empty, orderedPlans);
+        }
+
+        private static bool TryValidatePractice(ProgramPracticeInputDto practiceDto, out string error)
+        {
+            error = string.Empty;
+            if (practiceDto == null)
+            {
+                error = "Practice payload is required";
+                return false;
+            }
+
+            if (!practiceDto.PracticeId.HasValue)
+            {
+                error = "PracticeId is required";
+                return false;
+            }
+
+            if (practiceDto.Rest.HasValue && practiceDto.Rest.Value < 0)
+            {
+                error = "Rest must be zero or positive";
+                return false;
+            }
+
+            switch (practiceDto.Type)
+            {
+                case PracticeType.Set:
+                    if (!practiceDto.SetCount.HasValue || practiceDto.SetCount.Value <= 0)
+                    {
+                        error = "Set practices require a positive set count";
+                        return false;
+                    }
+                    if (!practiceDto.MovementCount.HasValue || practiceDto.MovementCount.Value <= 0)
+                    {
+                        error = "Set practices require a positive movement count";
+                        return false;
+                    }
+                    if (!practiceDto.Rest.HasValue)
+                    {
+                        error = "Set practices require rest value";
+                        return false;
+                    }
+                    break;
+
+                case PracticeType.Time:
+                    if (!practiceDto.Duration.HasValue || practiceDto.Duration.Value <= 0)
+                    {
+                        error = "Time practices require a positive duration";
+                        return false;
+                    }
+                    if (!practiceDto.Rest.HasValue)
+                    {
+                        error = "Time practices require rest value";
+                        return false;
+                    }
+                    break;
+
+                default:
+                    error = "Unsupported practice type";
+                    return false;
+            }
+
+            return true;
+        }
+
+        private class RoutineItemPlan
+        {
+            public ProgramRoutineItemType ItemType { get; set; }
+            public int DisplayOrder { get; set; }
+            public string Title { get; set; }
+            public int? RepeatCount { get; set; }
+            public int? RestBetweenRepeats { get; set; }
+            public string Notes { get; set; }
+            public List<PracticePlan> Practices { get; set; } = new List<PracticePlan>();
+        }
+
+        private class PracticePlan
+        {
+            public int PracticeId { get; set; }
+            public PracticeType Type { get; set; }
+            public int? SetCount { get; set; }
+            public int? MovementCount { get; set; }
+            public int? Duration { get; set; }
+            public int? Rest { get; set; }
+            public int InternalOrder { get; set; }
+            public string Notes { get; set; }
         }
     }
 }

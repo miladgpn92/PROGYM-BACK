@@ -13,7 +13,10 @@ namespace Services.Services.CMS.Programs
         Task<ResponseModel> DeleteAsync(int gymId, int userId, int id, CancellationToken cancellationToken);
         Task<ResponseModel<PagedResult<ProgramSelectDto>>> GetListAsync(int gymId, int userId, string q, Pageres pager, CancellationToken cancellationToken);
         Task<ResponseModel<ProgramDetailDto>> GetByIdAsync(int gymId, int userId, int id, CancellationToken cancellationToken);
-        Task<ResponseModel> DeletePracticeAsync(int gymId, int userId, int programPracticeId, CancellationToken cancellationToken);
+        Task<ResponseModel> DeleteRoutineItemAsync(int gymId, int userId, int routineItemId, CancellationToken cancellationToken);
+        Task<ResponseModel> ReorderRoutineItemsAsync(int gymId, int userId, int programId, ProgramRoutineItemReorderDto dto, CancellationToken cancellationToken);
+        Task<ResponseModel> ReorderSupersetPracticesAsync(int gymId, int userId, ProgramSupersetPracticeReorderDto dto, CancellationToken cancellationToken);
+        Task<ResponseModel> UpdateRoutineItemMetadataAsync(int gymId, int userId, ProgramRoutineItemMetadataDto dto, CancellationToken cancellationToken);
         Task<ResponseModel> AttachToAthleteAsync(
             int gymId,
             int managerUserId,

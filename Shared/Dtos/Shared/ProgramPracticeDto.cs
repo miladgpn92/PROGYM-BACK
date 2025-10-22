@@ -20,5 +20,7 @@ namespace SharedModels.Dtos.Shared
 
         // Shared
         public int? Rest { get; set; }
+        public int? InternalOrder { get; set; }
+        public string Notes { get; set; }
     }
 }

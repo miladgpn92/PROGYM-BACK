@@ -21,6 +21,7 @@ namespace Entities
         public virtual ApplicationUser SubmitterUser { get; set; }
 
         public virtual ICollection<ProgramPractice> ProgramPractices { get; set; }
+        public virtual ICollection<ProgramRoutineItem> ProgramRoutineItems { get; set; }
         public virtual ICollection<UserProgram> UserPrograms { get; set; }
         public virtual ICollection<Exercise> Exercises { get; set; }
     }

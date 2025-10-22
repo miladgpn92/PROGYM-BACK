@@ -24,8 +24,15 @@ namespace SharedModels.Dtos.Shared
         public int? OwnerId { get; set; }
         // SubmitterUserId is taken from authenticated user; do not accept from client
 
-        // Practices to attach on create
-        public List<ProgramPracticeInputDto> Practices { get; set; }
+        // Routine items (single movement or superset) to attach on create
+        public List<ProgramRoutineItemInputDto> Practices { get; set; }
+
+        public override void CustomMappings(AutoMapper.IMappingExpression<Program, ProgramDto> mapping)
+        {
+            mapping.ForMember(d => d.Practices, opt => opt.Ignore());
+            mapping.ReverseMap()
+                   .ForMember(d => d.ProgramRoutineItems, opt => opt.Ignore());
+        }
     }
 
     public class ProgramSelectDto : SimpleBaseDto<ProgramSelectDto, Program>

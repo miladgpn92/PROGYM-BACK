@@ -86,10 +86,43 @@ namespace Web.Api.Programs
         }
 
         [HttpDelete("[action]")]
-        public async Task<IActionResult> DeletePractice([FromQuery] int gymId, int id, CancellationToken cancellationToken)
+        public async Task<IActionResult> DeleteRoutineItem([FromQuery] int gymId, int id, CancellationToken cancellationToken)
         {
             var userId = User.Identity.GetUserIdInt();
-            var res = await _service.DeletePracticeAsync(gymId, userId, id, cancellationToken);
+            var res = await _service.DeleteRoutineItemAsync(gymId, userId, id, cancellationToken);
+            if (res.IsSuccess)
+                return Ok();
+            else
+                return BadRequest(res.Description);
+        }
+
+        [HttpPost("[action]")]
+        public async Task<IActionResult> ReorderRoutineItems([FromQuery] int gymId, [FromQuery] int programId, [FromBody] ProgramRoutineItemReorderDto dto, CancellationToken cancellationToken)
+        {
+            var userId = User.Identity.GetUserIdInt();
+            var res = await _service.ReorderRoutineItemsAsync(gymId, userId, programId, dto, cancellationToken);
+            if (res.IsSuccess)
+                return Ok();
+            else
+                return BadRequest(res.Description);
+        }
+
+        [HttpPost("[action]")]
+        public async Task<IActionResult> ReorderSupersetPractices([FromQuery] int gymId, [FromBody] ProgramSupersetPracticeReorderDto dto, CancellationToken cancellationToken)
+        {
+            var userId = User.Identity.GetUserIdInt();
+            var res = await _service.ReorderSupersetPracticesAsync(gymId, userId, dto, cancellationToken);
+            if (res.IsSuccess)
+                return Ok();
+            else
+                return BadRequest(res.Description);
+        }
+
+        [HttpPut("[action]")]
+        public async Task<IActionResult> UpdateRoutineItemMetadata([FromQuery] int gymId, [FromBody] ProgramRoutineItemMetadataDto dto, CancellationToken cancellationToken)
+        {
+            var userId = User.Identity.GetUserIdInt();
+            var res = await _service.UpdateRoutineItemMetadataAsync(gymId, userId, dto, cancellationToken);
             if (res.IsSuccess)
                 return Ok();
             else

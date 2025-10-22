@@ -10,11 +10,14 @@ namespace SharedModels.Dtos.Shared
     public class ProgramPracticeSelectDto : SimpleBaseDto<ProgramPracticeSelectDto, ProgramPractice>
     {
         public int? PracticeId { get; set; }
+        public int ProgramRoutineItemId { get; set; }
+        public int InternalOrder { get; set; }
         public PracticeType Type { get; set; }
         public int? SetCount { get; set; }
         public int? MovementCount { get; set; }
         public int? Duration { get; set; }
         public int? Rest { get; set; }
+        public string Notes { get; set; }
         public string PracticeName { get; set; }
         public string PracticeEnTitle { get; set; }
         public IList<PracticeMediaSelectDto> Images { get; set; } = new List<PracticeMediaSelectDto>();
@@ -22,6 +25,9 @@ namespace SharedModels.Dtos.Shared
 
         public override void CustomMappings(AutoMapper.IMappingExpression<ProgramPractice, ProgramPracticeSelectDto> mapping)
         {
+            mapping.ForMember(d => d.ProgramRoutineItemId, opt => opt.MapFrom(s => s.ProgramRoutineItemId));
+            mapping.ForMember(d => d.InternalOrder, opt => opt.MapFrom(s => s.InternalOrder));
+            mapping.ForMember(d => d.Notes, opt => opt.MapFrom(s => s.Notes));
             mapping.ForMember(d => d.PracticeName, opt => opt.MapFrom(s => s.Practice.Name));
             mapping.ForMember(d => d.PracticeEnTitle, opt => opt.MapFrom(s => s.Practice.EnTitle));
             mapping.ForMember(d => d.Images, opt => opt.MapFrom(s => s.Practice.MediaItems
@@ -45,7 +51,7 @@ namespace SharedModels.Dtos.Shared
         public string OwnerFamily { get; set; }
         public string SubmitterName { get; set; }
         public string SubmitterFamily { get; set; }
-        public List<ProgramPracticeSelectDto> Practices { get; set; }
+        public List<ProgramRoutineItemSelectDto> Practices { get; set; }
 
         public override void CustomMappings(AutoMapper.IMappingExpression<Program, ProgramDetailDto> mapping)
         {
@@ -53,7 +59,7 @@ namespace SharedModels.Dtos.Shared
             mapping.ForMember(d => d.OwnerFamily, opt => opt.MapFrom(s => s.Owner.Family));
             mapping.ForMember(d => d.SubmitterName, opt => opt.MapFrom(s => s.SubmitterUser.Name));
             mapping.ForMember(d => d.SubmitterFamily, opt => opt.MapFrom(s => s.SubmitterUser.Family));
-            mapping.ForMember(d => d.Practices, opt => opt.MapFrom(s => s.ProgramPractices));
+            mapping.ForMember(d => d.Practices, opt => opt.MapFrom(s => s.ProgramRoutineItems.OrderBy(ri => ri.DisplayOrder)));
         }
     }
 }
