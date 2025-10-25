@@ -10,9 +10,6 @@ namespace SharedModels.Dtos.Shared
         [Range(1, 300, ErrorMessage = "Height must be between 1 and 300")]
         public int Height { get; set; }
 
-        [Range(1, 120, ErrorMessage = "Age must be between 1 and 120")]
-        public int Age { get; set; }
-
         [Range(typeof(decimal), "1", "400", ErrorMessage = "Weight must be between 1 and 400")]
         public decimal Weight { get; set; }
     }
@@ -55,5 +52,7 @@ namespace SharedModels.Dtos.Shared
 
         [MaxLength(500, ErrorMessageResourceName = nameof(ErrorMsg.MaxLenMsg), ErrorMessageResourceType = typeof(ErrorMsg))]
         public string PicUrl { get; set; }
+
+        public DateTime? BirthDate { get; set; }
     }
 }

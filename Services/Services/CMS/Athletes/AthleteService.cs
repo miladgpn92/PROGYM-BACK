@@ -71,6 +71,7 @@ namespace Services.Services.CMS.Athletes
                     Family = dto.Family,
                     PhoneNumber = dto.PhoneNumber,
                     Gender = dto.Gender,
+                    BirthDate = dto.BirthDate,
                     UserName = dto.PhoneNumber,
                     PhoneNumberConfirmed = true,
                     IsActive = true,
@@ -94,6 +95,7 @@ namespace Services.Services.CMS.Athletes
                 user.Name = dto.Name;
                 user.Family = dto.Family;
                 user.Gender = dto.Gender;
+                user.BirthDate = dto.BirthDate;
                 await _userManager.UpdateAsync(user);
             }
 
@@ -141,7 +143,8 @@ namespace Services.Services.CMS.Athletes
                             PhoneNumber = u.PhoneNumber,
                             Gender = u.Gender,
                             CreateDate = u.CreateDate,
-                            PicUrl = u.PicUrl
+                            PicUrl = u.PicUrl,
+                            BirthDate = u.BirthDate
                         };
 
             if (!string.IsNullOrWhiteSpace(q))
@@ -192,6 +195,7 @@ namespace Services.Services.CMS.Athletes
             user.Gender = dto.Gender;
             user.PhoneNumber = dto.PhoneNumber;
             user.UserName = dto.PhoneNumber;
+            user.BirthDate = dto.BirthDate;
 
             var res = await _userManager.UpdateAsync(user);
             if (!res.Succeeded)
@@ -231,6 +235,26 @@ namespace Services.Services.CMS.Athletes
             if (user == null)
                 return new ResponseModel<AthleteDetailDto>(false, null, "User not found");
 
+            var athleteDataRaw = await _athleteDataRepo.TableNoTracking
+                .Where(a => a.UserId == userId)
+                .OrderByDescending(a => a.SubmitDate)
+                .Select(a => new
+                {
+                    a.Id,
+                    a.SubmitDate,
+                    a.Height,
+                    a.Weight
+                }).ToListAsync(cancellationToken);
+
+            var athleteDataDtos = athleteDataRaw.Select(a => new AthleteDataDto
+            {
+                Id = a.Id,
+                SubmitDate = a.SubmitDate,
+                Height = a.Height,
+                Weight = a.Weight,
+                Age = CalculateAge(user.BirthDate, a.SubmitDate)
+            }).ToList();
+
             var detail = new AthleteDetailDto
             {
                 Id = user.Id,
@@ -240,17 +264,8 @@ namespace Services.Services.CMS.Athletes
                 Gender = user.Gender,
                 CreateDate = user.CreateDate,
                 PicUrl = user.PicUrl,
-                AthleteData = await _athleteDataRepo.TableNoTracking
-                    .Where(a => a.UserId == userId)
-                    .OrderByDescending(a => a.SubmitDate)
-                    .Select(a => new AthleteDataDto
-                    {
-                        Id = a.Id,
-                        SubmitDate = a.SubmitDate,
-                        Height = a.Height,
-                        Age = a.Age,
-                        Weight = a.Weight
-                    }).ToListAsync(cancellationToken),
+                BirthDate = user.BirthDate,
+                AthleteData = athleteDataDtos,
                 UserPrograms = await _userProgramRepo.TableNoTracking
                     .Where(up => up.UserId == userId)
                     .Include(up => up.Program)
@@ -266,6 +281,18 @@ namespace Services.Services.CMS.Athletes
             };
 
             return new ResponseModel<AthleteDetailDto>(true, detail);
+        }
+
+        private static int? CalculateAge(DateTime? birthDate, DateTime asOf)
+        {
+            if (!birthDate.HasValue)
+                return null;
+
+            var age = asOf.Year - birthDate.Value.Year;
+            if (birthDate.Value.Date > asOf.Date.AddYears(-age))
+                age--;
+
+            return age < 0 ? 0 : age;
         }
     }
 }

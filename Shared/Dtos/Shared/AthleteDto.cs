@@ -15,6 +15,7 @@ namespace SharedModels.Dtos.Shared
         public string PhoneNumber { get; set; }
         [Required]
         public Gender Gender { get; set; }
+        public DateTime? BirthDate { get; set; }
     }
 
     public class AthleteUpdateDto
@@ -27,6 +28,7 @@ namespace SharedModels.Dtos.Shared
         public string PhoneNumber { get; set; }
         [Required]
         public Gender Gender { get; set; }
+        public DateTime? BirthDate { get; set; }
     }
 
     public class AthleteSelectDto
@@ -40,6 +42,7 @@ namespace SharedModels.Dtos.Shared
 
         public Gender? Gender { get; set; }
         public DateTime CreateDate { get; set; }
+        public DateTime? BirthDate { get; set; }
     }
 
     public class AthleteDetailDto : AthleteSelectDto
@@ -53,7 +56,7 @@ namespace SharedModels.Dtos.Shared
         public int Id { get; set; }
         public DateTime SubmitDate { get; set; }
         public int Height { get; set; }
-        public int Age { get; set; }
+        public int? Age { get; set; }
         public decimal Weight { get; set; }
     }
 

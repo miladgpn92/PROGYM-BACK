@@ -1,16 +1,11 @@
-﻿using AutoMapper;
 using Common.Consts;
 using Common.Enums;
-using Entities;
-using SharedModels.CustomMapping;
 using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.Text;
 
 namespace SharedModels.Dtos
 {
-  public  class ProfileDto
+    public class ProfileDto
     {
         public int Id { get; set; }
 
@@ -29,7 +24,8 @@ namespace SharedModels.Dtos
 
         [Display(Name = "تصویر پروفایل")]
         public string UserPicUrl { get; set; }
-    }
-  
-}
 
+        [Display(Name = "تاریخ تولد")]
+        public DateTime? BirthDate { get; set; }
+    }
+}

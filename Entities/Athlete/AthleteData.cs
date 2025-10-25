@@ -9,7 +9,6 @@ namespace Entities
         public int UserId { get; set; }
         public DateTime SubmitDate { get; set; }
         public int Height { get; set; }
-        public int Age { get; set; }
         public decimal Weight { get; set; }
 
         public virtual ApplicationUser User { get; set; }
@@ -34,4 +33,3 @@ namespace Entities
         }
     }
 }
-

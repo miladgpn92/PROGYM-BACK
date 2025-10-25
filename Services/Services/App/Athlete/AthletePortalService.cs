@@ -50,20 +50,23 @@ namespace Services.Services.App.Athlete
 
         public async Task<ResponseModel<List<AthleteDataDto>>> GetAthleteDataAsync(int userId, CancellationToken cancellationToken)
         {
+            var user = await _userManager.FindByIdAsync(userId.ToString());
+            var birthDate = user?.BirthDate;
             var items = await _athleteDataRepo.TableNoTracking
                 .Where(a => a.UserId == userId)
                 .OrderByDescending(a => a.SubmitDate)
-                .Select(a => new AthleteDataDto
-                {
-                    Id = a.Id,
-                    SubmitDate = a.SubmitDate,
-                    Height = a.Height,
-                    Age = a.Age,
-                    Weight = a.Weight
-                })
                 .ToListAsync(cancellationToken);
 
-            return new ResponseModel<List<AthleteDataDto>>(true, items);
+            var dtoItems = items.Select(a => new AthleteDataDto
+            {
+                Id = a.Id,
+                SubmitDate = a.SubmitDate,
+                Height = a.Height,
+                Weight = a.Weight,
+                Age = CalculateAge(birthDate, a.SubmitDate)
+            }).ToList();
+
+            return new ResponseModel<List<AthleteDataDto>>(true, dtoItems);
         }
 
         public async Task<ResponseModel<int>> AddAthleteDataAsync(int userId, AthleteDataCreateDto dto, CancellationToken cancellationToken)
@@ -77,7 +80,6 @@ namespace Services.Services.App.Athlete
                 UserId = userId,
                 SubmitDate = DateTime.Now,
                 Height = dto.Height,
-                Age = dto.Age,
                 Weight = dto.Weight
             };
 
@@ -212,7 +214,8 @@ namespace Services.Services.App.Athlete
                 Name = user.Name,
                 Family = user.Family,
                 Gender = user.Gender,
-                UserPicUrl = user.PicUrl
+                UserPicUrl = user.PicUrl,
+                BirthDate = user.BirthDate
             };
 
             return new ResponseModel<ProfileDto>(true, dto);
@@ -228,6 +231,7 @@ namespace Services.Services.App.Athlete
             user.Family = dto.Family;
             user.Gender = dto.Gender;
             user.PicUrl = dto.PicUrl;
+            user.BirthDate = dto.BirthDate;
 
             var result = await _userManager.UpdateAsync(user);
             if (!result.Succeeded)
@@ -237,6 +241,18 @@ namespace Services.Services.App.Athlete
             }
 
             return new ResponseModel(true);
+        }
+
+        private static int? CalculateAge(DateTime? birthDate, DateTime asOf)
+        {
+            if (!birthDate.HasValue)
+                return null;
+
+            var age = asOf.Year - birthDate.Value.Year;
+            if (birthDate.Value.Date > asOf.Date.AddYears(-age))
+                age--;
+
+            return age < 0 ? 0 : age;
         }
     }
 }

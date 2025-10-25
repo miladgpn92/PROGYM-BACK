@@ -25,6 +25,8 @@ namespace Entities
 
         public Gender? Gender { get; set; }
 
+        public DateTime? BirthDate { get; set; }
+
         public bool IsActive { get; set; }
         public DateTime LastLoginDate { get; set; }
         public DateTime CreateDate { get; set; }
@@ -72,6 +74,7 @@ namespace Entities
             builder.Property(a => a.NationalCode).HasColumnType("varchar(10)");
             builder.Property(a => a.Name).HasMaxLength(100);
             builder.Property(a => a.Family).HasMaxLength(100);
+            builder.Property(a => a.BirthDate);
 
    
         }
