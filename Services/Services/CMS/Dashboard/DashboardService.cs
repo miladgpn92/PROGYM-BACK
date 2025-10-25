@@ -47,14 +47,21 @@ namespace Services.Services.CMS.Dashboard
                 .Distinct()
                 .CountAsync(cancellationToken);
 
-            // Practices created by manager
+            // Users linked to the current gym (managers + athletes)
+            var gymUserIdsQuery = _gymUserRepo.TableNoTracking
+                .Where(gu => gu.GymId == gymId)
+                .Select(gu => gu.UserId);
+
+            // Practices created by any user in the gym
             var practicesCount = await _practiceRepo.TableNoTracking
-                .Where(p => p.UserId == managerUserId)
+                .Where(p => gymUserIdsQuery.Contains(p.UserId))
                 .CountAsync(cancellationToken);
 
-            // Programs owned or submitted by manager (no gym relation in schema)
+            // Programs owned or submitted by users linked to the gym
             var programsCount = await _programRepo.TableNoTracking
-                .Where(p => p.OwnerId == managerUserId || p.SubmitterUserId == managerUserId)
+                .Where(p =>
+                    (p.OwnerId.HasValue && gymUserIdsQuery.Contains(p.OwnerId.Value)) ||
+                    gymUserIdsQuery.Contains(p.SubmitterUserId))
                 .CountAsync(cancellationToken);
 
             var payload = new ManagerCountsDto
