@@ -51,7 +51,7 @@ namespace SharedModels.Dtos.Shared
         public string OwnerFamily { get; set; }
         public string SubmitterName { get; set; }
         public string SubmitterFamily { get; set; }
-        public List<ProgramRoutineItemSelectDto> Practices { get; set; }
+        public List<ProgramRoutineItemSelectDto> RoutineItems { get; set; } = new List<ProgramRoutineItemSelectDto>();
 
         public override void CustomMappings(AutoMapper.IMappingExpression<Program, ProgramDetailDto> mapping)
         {
@@ -59,7 +59,7 @@ namespace SharedModels.Dtos.Shared
             mapping.ForMember(d => d.OwnerFamily, opt => opt.MapFrom(s => s.Owner.Family));
             mapping.ForMember(d => d.SubmitterName, opt => opt.MapFrom(s => s.SubmitterUser.Name));
             mapping.ForMember(d => d.SubmitterFamily, opt => opt.MapFrom(s => s.SubmitterUser.Family));
-            mapping.ForMember(d => d.Practices, opt => opt.MapFrom(s => s.ProgramRoutineItems.OrderBy(ri => ri.DisplayOrder)));
+            mapping.ForMember(d => d.RoutineItems, opt => opt.MapFrom(s => s.ProgramRoutineItems.OrderBy(ri => ri.DisplayOrder)));
         }
     }
 }

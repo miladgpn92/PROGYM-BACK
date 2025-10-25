@@ -80,7 +80,7 @@ namespace Services.Tests
             {
                 Title = "Invalid Program",
                 Type = ProgramTypes.Private,
-                Practices = new List<ProgramRoutineItemInputDto>
+                RoutineItems = new List<ProgramRoutineItemInputDto>
                 {
                     new ProgramRoutineItemInputDto
                     {
@@ -120,7 +120,7 @@ namespace Services.Tests
             {
                 Title = "Invalid Practice Data",
                 Type = ProgramTypes.Private,
-                Practices = new List<ProgramRoutineItemInputDto>
+                RoutineItems = new List<ProgramRoutineItemInputDto>
                 {
                     new ProgramRoutineItemInputDto
                     {
@@ -284,7 +284,7 @@ namespace Services.Tests
             {
                 Title = "Hybrid Program",
                 Type = ProgramTypes.Private,
-                Practices = new List<ProgramRoutineItemInputDto>
+                RoutineItems = new List<ProgramRoutineItemInputDto>
                 {
                     new ProgramRoutineItemInputDto
                     {

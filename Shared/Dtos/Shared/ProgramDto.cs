@@ -15,7 +15,7 @@ namespace SharedModels.Dtos.Shared
         [MaxLength(200, ErrorMessageResourceName = nameof(ErrorMsg.MaxLenMsg), ErrorMessageResourceType = typeof(ErrorMsg))]
         public string Title { get; set; }
 
-        // CountOfPractice is computed from Practices; do not accept from client
+        // CountOfPractice is computed from routine items; do not accept from client
 
         [Display(Name = "Type")]
         public ProgramTypes Type { get; set; }
@@ -25,11 +25,11 @@ namespace SharedModels.Dtos.Shared
         // SubmitterUserId is taken from authenticated user; do not accept from client
 
         // Routine items (single movement or superset) to attach on create
-        public List<ProgramRoutineItemInputDto> Practices { get; set; }
+        public List<ProgramRoutineItemInputDto> RoutineItems { get; set; }
 
         public override void CustomMappings(AutoMapper.IMappingExpression<Program, ProgramDto> mapping)
         {
-            mapping.ForMember(d => d.Practices, opt => opt.Ignore());
+            mapping.ForMember(d => d.RoutineItems, opt => opt.Ignore());
             mapping.ReverseMap()
                    .ForMember(d => d.ProgramRoutineItems, opt => opt.Ignore());
         }

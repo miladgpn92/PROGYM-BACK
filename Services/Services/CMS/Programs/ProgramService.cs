@@ -58,7 +58,7 @@ namespace Services.Services.CMS.Programs
                     return new ResponseModel<ProgramSelectDto>(false, null, "Owner not found in current gym");
             }
 
-            var routineInputs = dto.Practices ?? new List<ProgramRoutineItemInputDto>();
+            var routineInputs = dto.RoutineItems ?? new List<ProgramRoutineItemInputDto>();
             var (isValid, validationMessage, plans) = await PrepareRoutinePlansAsync(routineInputs, cancellationToken);
             if (!isValid)
                 return new ResponseModel<ProgramSelectDto>(false, null, validationMessage);
@@ -160,9 +160,9 @@ namespace Services.Services.CMS.Programs
             entity.Title = dto.Title;
             entity.Type = dto.Type;
 
-            if (dto.Practices != null)
+            if (dto.RoutineItems != null)
             {
-                var (isValid, validationMessage, plans) = await PrepareRoutinePlansAsync(dto.Practices, cancellationToken);
+                var (isValid, validationMessage, plans) = await PrepareRoutinePlansAsync(dto.RoutineItems, cancellationToken);
                 if (!isValid)
                     return new ResponseModel(false, validationMessage);
 
