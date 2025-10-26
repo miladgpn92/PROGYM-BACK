@@ -42,22 +42,43 @@ module.exports = {
         rules: [
             {
                 test: /\.css$/i,
-                use: [MiniCssExtractPlugin.loader, "css-loader"],
+                use: [
+                    MiniCssExtractPlugin.loader,
+                    "css-loader",
+                    {
+                        loader: "postcss-loader",
+                        options: {
+                            postcssOptions: {
+                                plugins: [
+                                    require("tailwindcss")({
+                                        config: path.resolve(__dirname, "tailwind.config.js"),
+                                    }),
+                                    require("autoprefixer"),
+                                ],
+                            },
+                        },
+                    },
+                ],
             },
             {
                 test: /\.scss$/,
                 use: [
                     MiniCssExtractPlugin.loader,
                     "css-loader",
-                    "sass-loader",
                     {
                         loader: "postcss-loader",
                         options: {
                             postcssOptions: {
-                                plugins: [require("tailwindcss"), require("autoprefixer")],
+                                plugins: [
+                                    require("tailwindcss")({
+                                        config: path.resolve(__dirname, "tailwind.config.js"),
+                                    }),
+                                    require("autoprefixer"),
+                                ],
                             },
                         },
                     },
+                    "sass-loader",
                 ],
             },
             {
