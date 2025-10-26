@@ -38,6 +38,8 @@ namespace Entities
         public string BaleLink { get; set; }
 
         public virtual ICollection<GymUser> GymUsers { get; set; }
+        public virtual ICollection<Practice> Practices { get; set; }
+        public virtual ICollection<Program> Programs { get; set; }
 
         public long FileUsageBytes { get; set; }
 
@@ -92,6 +94,16 @@ namespace Entities
             builder.Property(x => x.FileStorageLimitBytes)
                    .HasDefaultValue(1024L * 1024L * 1024L)
                    .IsRequired();
+
+            builder.HasMany(x => x.Practices)
+                   .WithOne(p => p.Gym)
+                   .HasForeignKey(p => p.GymId)
+                   .OnDelete(DeleteBehavior.Restrict);
+
+            builder.HasMany(x => x.Programs)
+                   .WithOne(p => p.Gym)
+                   .HasForeignKey(p => p.GymId)
+                   .OnDelete(DeleteBehavior.Restrict);
 
             builder.HasMany(x => x.GymFiles)
                    .WithOne(x => x.Gym)

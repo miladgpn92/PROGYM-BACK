@@ -12,8 +12,10 @@ namespace Entities
         public string Desc { get; set; }
         public int PracticeCategoryId { get; set; }
         public int UserId { get; set; }
+        public int GymId { get; set; }
         public DateTime CreateDate { get; set; }
 
+        public virtual Gym Gym { get; set; }
         public virtual PracticeCategory PracticeCategory { get; set; }
         public virtual ApplicationUser User { get; set; }
 
@@ -40,6 +42,11 @@ namespace Entities
                    .HasForeignKey(x => x.PracticeCategoryId)
                    .OnDelete(DeleteBehavior.Restrict);
 
+            builder.HasOne(x => x.Gym)
+                   .WithMany(g => g.Practices)
+                   .HasForeignKey(x => x.GymId)
+                   .OnDelete(DeleteBehavior.Restrict);
+
             builder.HasOne(x => x.User)
                    .WithMany(u => u.Practices)
                    .HasForeignKey(x => x.UserId)
@@ -54,6 +61,7 @@ namespace Entities
 
             builder.HasIndex(x => x.PracticeCategoryId);
             builder.HasIndex(x => x.UserId);
+            builder.HasIndex(x => x.GymId);
         }
     }
 }

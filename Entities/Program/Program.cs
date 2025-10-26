@@ -12,11 +12,13 @@ namespace Entities
         public string Title { get; set; }
         public int CountOfPractice { get; set; }
         public ProgramTypes Type { get; set; }
+        public int GymId { get; set; }
 
         public int? OwnerId { get; set; }
         public int SubmitterUserId { get; set; }
         public System.DateTime CreateDate { get; set; }
 
+        public virtual Gym Gym { get; set; }
         public virtual ApplicationUser Owner { get; set; }
         public virtual ApplicationUser SubmitterUser { get; set; }
 
@@ -35,6 +37,13 @@ namespace Entities
                    .IsRequired();
 
             // Enum stored as int by default
+            builder.Property(x => x.GymId)
+                   .IsRequired();
+
+            builder.HasOne(x => x.Gym)
+                   .WithMany(g => g.Programs)
+                   .HasForeignKey(x => x.GymId)
+                   .OnDelete(DeleteBehavior.Restrict);
 
             builder.HasOne(x => x.Owner)
                    .WithMany(u => u.OwnedPrograms)
@@ -46,6 +55,7 @@ namespace Entities
                    .HasForeignKey(x => x.SubmitterUserId)
                    .OnDelete(DeleteBehavior.Restrict);
 
+            builder.HasIndex(x => x.GymId);
             builder.HasIndex(x => x.OwnerId);
             builder.HasIndex(x => x.SubmitterUserId);
             builder.Property(x => x.CreateDate);

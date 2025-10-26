@@ -61,6 +61,7 @@ namespace Services.Services.CMS.Practices
 
             var entity = dto.ToEntity(_mapper);
             entity.UserId = userId; // submitter/owner
+            entity.GymId = gymId;
             entity.CreateDate = System.DateTime.Now;
 
             await _practiceRepo.AddAsync(entity, cancellationToken);
@@ -86,7 +87,7 @@ namespace Services.Services.CMS.Practices
             if (!hasAccess)
                 return new ResponseModel(false, "Access denied");
 
-            var entity = await _practiceRepo.Table.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+            var entity = await _practiceRepo.Table.FirstOrDefaultAsync(x => x.Id == id && x.GymId == gymId, cancellationToken);
             if (entity == null)
                 return new ResponseModel(false, "Not found");
 
@@ -146,7 +147,7 @@ namespace Services.Services.CMS.Practices
             if (!hasAccess)
                 return new ResponseModel(false, "Access denied");
 
-            var entity = await _practiceRepo.Table.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+            var entity = await _practiceRepo.Table.FirstOrDefaultAsync(x => x.Id == id && x.GymId == gymId, cancellationToken);
             if (entity == null)
                 return new ResponseModel(false, "Not found");
 
@@ -164,7 +165,8 @@ namespace Services.Services.CMS.Practices
             if (!hasAccess)
                 return new ResponseModel<PagedResult<PracticeSelectDto>>(false, null, "Access denied");
 
-            var query = _practiceRepo.TableNoTracking;
+            var query = _practiceRepo.TableNoTracking
+                .Where(x => x.GymId == gymId);
             if (!string.IsNullOrWhiteSpace(q))
                 query = query.Where(x =>
                     x.Name.Contains(q) ||
@@ -197,7 +199,7 @@ namespace Services.Services.CMS.Practices
                 return new ResponseModel<PracticeSelectDto>(false, null, "Access denied");
 
             var item = await _practiceRepo.TableNoTracking
-                .Where(x => x.Id == id)
+                .Where(x => x.Id == id && x.GymId == gymId)
                 .ProjectTo<PracticeSelectDto>(_mapper.ConfigurationProvider)
                 .FirstOrDefaultAsync(cancellationToken);
 

@@ -36,6 +36,7 @@ namespace SharedModels.Dtos.Shared
 
     public class PracticeSelectDto : SimpleBaseDto<PracticeSelectDto, Practice>
     {
+        public int GymId { get; set; }
         public string Name { get; set; }
         public string EnTitle { get; set; }
         public string Desc { get; set; }

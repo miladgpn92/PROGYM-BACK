@@ -41,6 +41,7 @@ namespace SharedModels.Dtos.Shared
 
     public class ProgramDetailDto : SimpleBaseDto<ProgramDetailDto, Program>
     {
+        public int GymId { get; set; }
         public string Title { get; set; }
         public int? CountOfPractice { get; set; }
         public ProgramTypes Type { get; set; }

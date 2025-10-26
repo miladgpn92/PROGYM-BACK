@@ -59,7 +59,7 @@ namespace Services.Services.CMS.Programs
             }
 
             var routineInputs = dto.RoutineItems ?? new List<ProgramRoutineItemInputDto>();
-            var (isValid, validationMessage, plans) = await PrepareRoutinePlansAsync(routineInputs, cancellationToken);
+            var (isValid, validationMessage, plans) = await PrepareRoutinePlansAsync(gymId, routineInputs, cancellationToken);
             if (!isValid)
                 return new ResponseModel<ProgramSelectDto>(false, null, validationMessage);
 
@@ -69,6 +69,7 @@ namespace Services.Services.CMS.Programs
                 Type = dto.Type,
                 OwnerId = ownerId,
                 SubmitterUserId = userId,
+                GymId = gymId,
                 CreateDate = DateTime.Now,
                 CountOfPractice = plans.Sum(p => p.Practices.Count)
             };
@@ -118,7 +119,7 @@ namespace Services.Services.CMS.Programs
             }
 
             var model = await _programRepo.TableNoTracking
-                .Where(x => x.Id == entity.Id)
+                .Where(x => x.Id == entity.Id && x.GymId == gymId)
                 .Include(x => x.Owner)
                 .Include(x => x.SubmitterUser)
                 .ProjectTo<ProgramSelectDto>(_mapper.ConfigurationProvider)
@@ -137,7 +138,7 @@ namespace Services.Services.CMS.Programs
             var entity = await _programRepo.Table
                 .Include(x => x.ProgramRoutineItems)
                     .ThenInclude(ri => ri.ProgramPractices)
-                .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+                .FirstOrDefaultAsync(x => x.Id == id && x.GymId == gymId, cancellationToken);
             if (entity == null)
                 return new ResponseModel(false, "Not found");
 
@@ -162,7 +163,7 @@ namespace Services.Services.CMS.Programs
 
             if (dto.RoutineItems != null)
             {
-                var (isValid, validationMessage, plans) = await PrepareRoutinePlansAsync(dto.RoutineItems, cancellationToken);
+                var (isValid, validationMessage, plans) = await PrepareRoutinePlansAsync(gymId, dto.RoutineItems, cancellationToken);
                 if (!isValid)
                     return new ResponseModel(false, validationMessage);
 
@@ -234,7 +235,7 @@ namespace Services.Services.CMS.Programs
             if (!hasAccess)
                 return new ResponseModel(false, "Access denied");
 
-            var entity = await _programRepo.Table.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+            var entity = await _programRepo.Table.FirstOrDefaultAsync(x => x.Id == id && x.GymId == gymId, cancellationToken);
             if (entity == null)
                 return new ResponseModel(false, "Not found");
 
@@ -254,6 +255,8 @@ namespace Services.Services.CMS.Programs
                 .Include(ri => ri.ProgramPractices)
                 .FirstOrDefaultAsync(ri => ri.Id == routineItemId, cancellationToken);
             if (routineItem == null)
+                return new ResponseModel(false, "Not found");
+            if (routineItem.Program == null || routineItem.Program.GymId != gymId)
                 return new ResponseModel(false, "Not found");
 
             var practices = routineItem.ProgramPractices.ToList();
@@ -284,7 +287,7 @@ namespace Services.Services.CMS.Programs
 
             var program = await _programRepo.Table
                 .Include(p => p.ProgramRoutineItems)
-                .FirstOrDefaultAsync(p => p.Id == programId, cancellationToken);
+                .FirstOrDefaultAsync(p => p.Id == programId && p.GymId == gymId, cancellationToken);
             if (program == null)
                 return new ResponseModel(false, "Program not found");
 
@@ -322,9 +325,12 @@ namespace Services.Services.CMS.Programs
                 return new ResponseModel(false, "Access denied");
 
             var routineItem = await _programRoutineItemRepo.Table
+                .Include(ri => ri.Program)
                 .Include(ri => ri.ProgramPractices)
                 .FirstOrDefaultAsync(ri => ri.Id == dto.RoutineItemId, cancellationToken);
             if (routineItem == null)
+                return new ResponseModel(false, "Routine item not found");
+            if (routineItem.Program == null || routineItem.Program.GymId != gymId)
                 return new ResponseModel(false, "Routine item not found");
 
             if (routineItem.ItemType != ProgramRoutineItemType.Superset)
@@ -363,8 +369,12 @@ namespace Services.Services.CMS.Programs
             if (!hasAccess)
                 return new ResponseModel(false, "Access denied");
 
-            var routineItem = await _programRoutineItemRepo.Table.FirstOrDefaultAsync(ri => ri.Id == dto.RoutineItemId, cancellationToken);
+            var routineItem = await _programRoutineItemRepo.Table
+                .Include(ri => ri.Program)
+                .FirstOrDefaultAsync(ri => ri.Id == dto.RoutineItemId, cancellationToken);
             if (routineItem == null)
+                return new ResponseModel(false, "Routine item not found");
+            if (routineItem.Program == null || routineItem.Program.GymId != gymId)
                 return new ResponseModel(false, "Routine item not found");
 
             if (routineItem.ItemType == ProgramRoutineItemType.Superset)
@@ -396,7 +406,8 @@ namespace Services.Services.CMS.Programs
             if (!hasAccess)
                 return new ResponseModel<PagedResult<ProgramSelectDto>>(false, null, "Access denied");
 
-            var query = _programRepo.TableNoTracking;
+            var query = _programRepo.TableNoTracking
+                .Where(x => x.GymId == gymId);
             if (!string.IsNullOrWhiteSpace(q))
                 query = query.Where(x => x.Title.Contains(q));
 
@@ -429,7 +440,7 @@ namespace Services.Services.CMS.Programs
                 return new ResponseModel<ProgramDetailDto>(false, null, "Access denied");
 
             var item = await _programRepo.TableNoTracking
-                .Where(x => x.Id == id)
+                .Where(x => x.Id == id && x.GymId == gymId)
                 .Include(x => x.Owner)
                 .Include(x => x.SubmitterUser)
                 .Include(x => x.ProgramRoutineItems)
@@ -460,7 +471,7 @@ namespace Services.Services.CMS.Programs
             if (!managerHasAccess)
                 return new ResponseModel(false, "Access denied");
 
-            var program = await _programRepo.TableNoTracking.FirstOrDefaultAsync(p => p.Id == programId, cancellationToken);
+            var program = await _programRepo.TableNoTracking.FirstOrDefaultAsync(p => p.Id == programId && p.GymId == gymId, cancellationToken);
             if (program == null)
                 return new ResponseModel(false, "Program not found");
 
@@ -497,8 +508,12 @@ namespace Services.Services.CMS.Programs
             if (!managerHasAccess)
                 return new ResponseModel(false, "Access denied");
 
-            var userProgram = await _userProgramRepo.Table.FirstOrDefaultAsync(up => up.Id == userProgramId, cancellationToken);
+            var userProgram = await _userProgramRepo.Table
+                .Include(up => up.Program)
+                .FirstOrDefaultAsync(up => up.Id == userProgramId, cancellationToken);
             if (userProgram == null)
+                return new ResponseModel(false, "Not found");
+            if (userProgram.Program == null || userProgram.Program.GymId != gymId)
                 return new ResponseModel(false, "Not found");
 
             await _userProgramRepo.DeleteAsync(userProgram, cancellationToken);
@@ -506,6 +521,7 @@ namespace Services.Services.CMS.Programs
         }
 
         private async Task<(bool Success, string Error, List<RoutineItemPlan> Plans)> PrepareRoutinePlansAsync(
+            int gymId,
             List<ProgramRoutineItemInputDto> routineInputs,
             CancellationToken cancellationToken)
         {
@@ -604,7 +620,7 @@ namespace Services.Services.CMS.Programs
                 .ToList();
 
             var existsCount = await _practiceRepo.TableNoTracking
-                .CountAsync(p => practiceIds.Contains(p.Id), cancellationToken);
+                .CountAsync(p => practiceIds.Contains(p.Id) && p.GymId == gymId, cancellationToken);
 
             if (existsCount != practiceIds.Count)
                 return (false, "One or more practices are invalid", null);
