@@ -1,4 +1,4 @@
-@page
+﻿@page
 @using Web.Pages.Template.Components.CommonComponent.AdminBar;
 @model IndexModel
 @{
@@ -19,10 +19,10 @@ Text = "\u062F\u0627\u0634\u0628\u0648\u0631\u062F"
 }
 
 <div class="min-h-screen bg-[#1A1B1C] text-white flex flex-col">
-    <header class="w-full bg-[#1A1A1A]">
-        <div class="mx-auto flex w-full max-w-6xl items-center justify-between gap-6 px-6 py-3">
+        <header class="w-full bg-[#1A1A1A]">
+        <div class="relative mx-auto flex w-full max-w-6xl items-center justify-between gap-6 px-6 py-3">
             <div class="flex items-center gap-3">
-                <a href="/" class="flex  items-center justify-center">
+                <a href="/" class="flex items-center justify-center">
                     <svg width="50" height="50" viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <rect width="50" height="50" rx="8.82353" fill="url(#paint0_linear_353_81508)" />
                         <path
@@ -44,14 +44,27 @@ Text = "\u062F\u0627\u0634\u0628\u0648\u0631\u062F"
 
             </div>
 
-            <nav class="flex flex-1 items-center justify-center gap-8 text-sm font-medium text-white/80">
+            <button type="button"
+                    class="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 text-white transition hover:border-white/40 hover:bg-white/5 lg:hidden"
+                    data-mobile-menu-toggle
+                    aria-expanded="false"
+                    aria-controls="primary-navigation">
+                <span class="sr-only">باز کردن منو</span>
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+            </button>
+
+            <nav id="primary-navigation"
+                 class="hidden absolute top-full left-0 right-0 z-20 mt-4 w-full flex flex-col items-center gap-4 rounded-2xl bg-white/5 px-6 py-4 text-sm font-medium text-white/90 backdrop-blur lg:static lg:mt-0 lg:flex lg:w-auto lg:flex-1 lg:flex-row lg:items-center lg:justify-center lg:gap-8 lg:bg-transparent lg:p-0"
+                 data-mobile-menu>
                 <a class="transition hover:text-white" href="#">خانه</a>
-                <a class="transition hover:text-white" href="#">باشگاه</a>
+                <a class="transition hover:text-white" href="#">باشگاه‌ها</a>
                 <a class="transition hover:text-white" href="#">تماس با ما</a>
             </nav>
 
             <div class="flex items-center justify-end gap-3">
-                <a href="#" class="rounded-md bg-[#A00C4B] px-5 py-2 text-sm font-semibold text-white  transition">
+                <a href="#" class="rounded-md bg-[#A00C4B] px-5 py-2 text-sm font-semibold text-white transition">
                     ورود
                 </a>
             </div>

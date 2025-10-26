@@ -1,0 +1,90 @@
+﻿@page
+@model Web.Pages.DTCMS.Gym.IndexModel
+@{
+}
+
+@inject IStringLocalizer<ResourceLibrary.Panel.Admin.Article.Article> Localizer;
+@inject IStringLocalizer<ResourceLibrary.Panel.Common.Global.Global> GlobalLocalizer;
+@{
+    ViewData["Title"] = Localizer["Title"];
+    Layout = "_DashLayout";
+    string PageName = "gym";
+    string PageRoute = "gym";
+}
+
+<vc:page-action page-name="@PageName" search-filter-query="title"></vc:page-action>
+<dt:grid-container page-name="@PageName" page-title="@Localizer["Title"]" filter-count="@Model.PageFilter.filters.Count" page="@Model.PageFilter.arg.PageNumber" total="@Model.Items.Count">
+    <main class="my-8">
+        @foreach (var item in Model.Items)
+        {
+            <dt:grid-card item-id="@item.Id">
+                <div class="">
+                    <div class="text-gray-800 font-bold mb-2">
+                        <dt:text length="60">
+                            @item.Title
+                        </dt:text>
+                    </div>
+                    <div class="text-gray-600 font-normal text-sm">
+
+                        @item.ApplicationUserName @item.ApplicationUserFamily @if(item.CreateDate != null){
+                            @GlobalLocalizer["In"] @item.CreateDate.Value.ToString("d")
+                        }
+
+                    </div>
+                </div>
+                <div class="md:hidden rtl:mr-auto ml-[11px] ltr:ml-auto mr-[11px]" data-sheet-control="mobile__more__sheet__@item.Id">
+                    <button>
+                        <span class="icon-Dots-vertical"></span>
+                    </button>
+                </div>
+                <div class="hidden md:flex md:items-center rtl:md:mr-auto rtl:md:ml-[11px] ltr:md:ml-auto ltr:md:mr-[11px]  ">
+                    <a class="cursor-pointer mr-4" href="/@PageRoute/@item.Slug" target="_blank">
+
+                        <span class="icon-Eye text-xl text-gray-700"></span>
+
+                    </a>
+
+                    <a class="cursor-pointer mr-4" href="/dtcms/@PageName/upsert?id=@item.Id">
+                        <span class="icon-Pencil text-xl text-gray-700"></span>
+                    </a>
+                    <div class="cursor-pointer mr-4" data-sheet-control="delete__box__@item.Id">
+                        <span class="icon-Trash text-xl text-gray-700"></span>
+
+                    </div>
+                </div>
+                <dt:bottom-sheet id="mobile__more__sheet__@item.Id" min-height="37">
+                    <div class="w-[100%] flex flex-col justify-between pb-10 rtl:mr-auto items-end ltr:ml-auto items-start  ">
+                        <h3 class="mx-auto font-semibold text-lg mb-5">@item.Title</h3>
+                        <a class="cursor-pointer mr-4 border-b-2 pb-2 border-gray-100 w-full flex"
+                           href="/@PageRoute/@item.Slug"
+                           target="_blank">
+
+                            <span class="icon-Eye text-xl text-gray-700"></span>
+
+                            <span class="font-semibold text-base mx-2">@GlobalLocalizer["View"]</span>
+                        </a>
+
+                        <a class="cursor-pointer rtl:mr-4 ltr:ml-4 border-b-2 pb-2 border-gray-100 w-full pt-6 flex"
+                           href="/dtcms/@PageName/upsert?id=@item.Id">
+                            <span class="icon-Pencil text-xl text-gray-700"></span>
+                            <span class="font-semibold text-base mx-2">@GlobalLocalizer["Edit"]</span>
+                        </a>
+                        <div class="cursor-pointer w-[100%] rtl:mr-4 ltr:ml-4 pt-6 flex" data-sheet-control="delete__box__@item.Id">
+                            <span class="icon-Trash text-xl text-red-600"></span>
+                            <span class="font-semibold text-base mx-2 text-red-600">@GlobalLocalizer["Delete"]</span>
+                        </div>
+                    </div>
+
+                </dt:bottom-sheet>
+                <vc:delete-single title="@item.Title" id="@item.Id"></vc:delete-single>
+
+
+            </dt:grid-card>
+        }
+        <dt:pagination page="@Model.PageFilter.arg.PageNumber" size="@Model.PageFilter.arg.PageSize" total="@Model.Items.Count"></dt:pagination>
+
+
+
+    </main>
+
+</dt:grid-container>

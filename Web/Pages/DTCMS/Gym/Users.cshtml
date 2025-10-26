@@ -1,0 +1,109 @@
+@page "{gymId:int}"
+@model Web.Pages.DTCMS.Gym.UsersModel
+@using Common.Utilities
+@using Common.Enums
+
+@{
+    ViewData["Title"] = "مدیریت کاربران باشگاه";
+    Layout = "_DashLayout";
+    ViewBag.HasBottomSheetMenu = false;
+}
+
+<main class="space-y-8">
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+    {
+        <div class="rounded-md bg-green-50 p-4 text-sm text-green-700">
+            @Model.StatusMessage
+        </div>
+    }
+
+    <div asp-validation-summary="ModelOnly" class="rounded-md bg-red-50 p-4 text-sm text-red-600"></div>
+
+    <div class="grid grid-cols-1 gap-8 lg:grid-cols-2">
+        <section class="rounded-lg bg-white p-6 shadow">
+            <header class="mb-4 flex items-center justify-between">
+                <h2 class="text-lg font-semibold text-gray-900">اعضای باشگاه</h2>
+                <span class="text-sm text-gray-500">شناسه باشگاه: @Model.GymId</span>
+            </header>
+
+            @if (Model.GymUsers.Any())
+            {
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr class="text-right text-xs font-medium uppercase text-gray-500">
+                                <th class="px-4 py-2">نام</th>
+                                <th class="px-4 py-2">نام خانوادگی</th>
+                                <th class="px-4 py-2">شماره موبایل</th>
+                                <th class="px-4 py-2">نقش</th>
+                                <th class="px-4 py-2">تاریخ عضویت</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200 bg-white text-sm text-gray-700">
+                            @foreach (var user in Model.GymUsers)
+                            {
+                                <tr>
+                                    <td class="px-4 py-2">@user.Name</td>
+                                    <td class="px-4 py-2">@user.Family</td>
+                                    <td class="px-4 py-2">@user.PhoneNumber</td>
+                                    <td class="px-4 py-2">@(@user.Role.GetDisplayName() ?? user.Role.ToString())</td>
+                                    <td class="px-4 py-2">@user.JoinDate.ToString("yyyy/MM/dd")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <p class="text-sm text-gray-500">تا الان کاربری برای این باشگاه ثبت نشده است.</p>
+            }
+        </section>
+
+        <section class="rounded-lg bg-white p-6 shadow">
+            <h2 class="mb-4 text-lg font-semibold text-gray-900">افزودن کاربر جدید</h2>
+
+            <form method="post" class="space-y-5">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="GymId" />
+
+                <div>
+                    <label asp-for="Input.Name" class="mb-1 block text-sm font-medium text-gray-700"></label>
+                    <dt:input-text asp-for="Input.Name"></dt:input-text>
+                    <span asp-validation-for="Input.Name" class="text-xs text-red-600"></span>
+                </div>
+
+                <div>
+                    <label asp-for="Input.Family" class="mb-1 block text-sm font-medium text-gray-700"></label>
+                    <dt:input-text asp-for="Input.Family"></dt:input-text>
+                    <span asp-validation-for="Input.Family" class="text-xs text-red-600"></span>
+                </div>
+
+                <div>
+                    <label asp-for="Input.PhoneNumber" class="mb-1 block text-sm font-medium text-gray-700"></label>
+                    <dt:input-text asp-for="Input.PhoneNumber"></dt:input-text>
+                    <span asp-validation-for="Input.PhoneNumber" class="text-xs text-red-600"></span>
+                </div>
+
+                <div>
+                    <label asp-for="Input.Role" class="mb-1 block text-sm font-medium text-gray-700"></label>
+                    <select asp-for="Input.Role"
+                            asp-items="Model.AvailableRoles"
+                            class="block w-full rounded-md border border-gray-300 bg-white py-2 px-3 text-sm text-gray-700 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500">
+                        <option value="">انتخاب نقش...</option>
+                    </select>
+                    <span asp-validation-for="Input.Role" class="text-xs text-red-600"></span>
+                </div>
+
+                <button type="submit"
+                        class="flex w-full items-center justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1">
+                    افزودن کاربر
+                </button>
+            </form>
+        </section>
+    </div>
+</main>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

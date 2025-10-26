@@ -1,0 +1,106 @@
+﻿@page
+@model Web.Pages.DTCMS.Gym.UpsertModel
+
+@inject IStringLocalizer<ResourceLibrary.Panel.Common.Global.Global> GlobalLocalizer;
+@{
+    if (Model.IsEdit)
+    {
+        ViewData["Title"] = GlobalLocalizer["Edit"] + ": " + Model?.Items?.Title;
+    }
+    else
+    {
+        ViewData["Title"] = "افزودن باشگاه";
+    }
+
+    Layout = "_DashLayout";
+
+    string PageRoute = "/gym/";
+    ViewBag.HasBottomSheetMenu = false;
+
+}
+
+<form method="post">
+
+    @Html.AntiForgeryToken()
+    @if (Model._IsReturn != null && Model._IsReturn == true)
+    {
+        <input type="hidden" asp-for="_IsReturn" />
+
+    }
+
+    <input type="hidden" asp-for="IsEdit" />
+    <input type="hidden" asp-for="Items.Id" />
+
+
+
+ 
+    <main>
+
+        <div class="rlt:text-right ltr:text-left">
+            <div class="mb-6">
+                <dt:image-uploader asp-for="Items.LogoUrl" max-size="600000" max-height="1024" aspect-ratio="1024/1024" helper-text="1024*1024"></dt:image-uploader>
+            </div>
+            <div class="mb-6">
+                <dt:input-text asp-for="Items.Title" target-class="page__slug" has-slug="true"></dt:input-text>
+            </div>
+ 
+
+ 
+        </div>
+
+        <div class="more__option_btn mb-10 relative w-full flex justify-center my-8" data-sheet-control="more__item">
+            <div class="z-0 inline-flex absolute h-[1px] w-full top-5 right-0 bg-gray-300">
+            </div>
+            <span class="z-10 py-2 px-8 cursor-pointer border bg-white border-gray-300 rounded-3xl inline-flex items-center">
+                <span class="icon-Plus-sm text-gray-400 font-bold"></span>
+
+                @GlobalLocalizer["More"]
+            </span>
+        </div>
+
+
+
+        @if (Model.IsEdit)
+        {
+            <button type="submit"
+                    class="text-center w-full focus:outline-none text-white bg-yellow-400 hover:bg-yellow-500 focus:ring-4 focus:ring-yellow-300 font-medium rounded-lg text-sm px-5 py-2.5  mb-2 dark:focus:ring-yellow-900">
+                @GlobalLocalizer["Edit"]
+            </button>
+        }
+        else
+        {
+            <button type="submit"
+                    class="text-center w-full text-white bg-green-400 hover:bg-green-500 focus:ring-4 focus:outline-none focus:bg-green-500 font-medium rounded-lg text-sm px-5 py-2.5 inline-flex dark:focus:ring-[#3b5998]/55  mb-2 items-center flex justify-center">
+                @GlobalLocalizer["Publish"]
+            </button>
+
+        }
+    </main>
+
+
+
+
+    <dt:bottom-sheet id="more__item" min-height="100" disable-drag="true" title="@GlobalLocalizer["MoreDetail"]">
+
+        <div class="text-left direction__ltr">
+            <dt:input-text target-class="page__slug" has-slug="true" class="page__slug"
+                           asp-for="Items.Slug"></dt:input-text>
+            <small>
+
+                <dt:base-url></dt:base-url>@PageRoute<b class="page__slug">@Model?.Items?.Slug</b>
+            </small>
+        </div>
+
+       
+
+        <dt:seo-trigger></dt:seo-trigger>
+
+    </dt:bottom-sheet>
+    <vc:seo-bottom-sheet title="@Model.Items.SeoTitle" desc="@Model.Items.SeoDescription"
+                         page-route="@PageRoute"></vc:seo-bottom-sheet>
+
+
+</form>
+
+
+

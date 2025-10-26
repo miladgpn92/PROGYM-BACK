@@ -231632,7 +231632,7 @@ const uploadFiles = (files = [], filePath = "", onProgress) => __awaiter(void 0,
         formData.append("files", file);
     });
     formData.append("filepath", filePath);
-    let res = yield _index__WEBPACK_IMPORTED_MODULE_0__["default"].post("/Filemanager/Uplaod", formData, {
+    let res = yield _index__WEBPACK_IMPORTED_MODULE_0__["default"].post("/admin/Filemanager/Uplaod", formData, {
         onUploadProgress: (progressEvent) => {
             const { loaded, total } = progressEvent;
             let percent = Math.round((loaded / total) * 100);
@@ -231712,7 +231712,7 @@ var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _argume
 
 const axiosInstance = axios__WEBPACK_IMPORTED_MODULE_1__["default"].create({
     // baseURL: "/api/v1/",
-    baseURL: "/api/v1/",
+    baseURL: "/api/",
     headers: {
         "Accept-Language": (0,_utils_index__WEBPACK_IMPORTED_MODULE_0__.serverLang)(),
     },

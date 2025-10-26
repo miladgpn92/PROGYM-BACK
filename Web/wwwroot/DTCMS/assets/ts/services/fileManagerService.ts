@@ -22,7 +22,7 @@ const uploadFiles = async (
     formData.append("files", file);
   });
   formData.append("filepath", filePath);
-  let res = await axios.post("/Filemanager/Uplaod", formData, {
+  let res = await axios.post("/admin/Filemanager/Uplaod", formData, {
     onUploadProgress: (progressEvent) => {
       const { loaded, total } = progressEvent;
       let percent = Math.round((loaded / total) * 100);

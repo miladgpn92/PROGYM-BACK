@@ -4,7 +4,7 @@ import { serverLang } from "../utils/index";
 const axiosInstance: AxiosInstance = axios.create({
   // baseURL: "/api/v1/",
 
-  baseURL: "/api/v1/",
+  baseURL: "/api/",
   headers: {
     "Accept-Language": serverLang(),
   },
