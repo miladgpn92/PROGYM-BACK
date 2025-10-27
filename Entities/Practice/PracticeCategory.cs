@@ -8,7 +8,9 @@ namespace Entities
     {
         public string Title { get; set; }
         public int SubmitterUserId { get; set; }
+        public int GymId { get; set; }
 
+        public virtual Gym Gym { get; set; }
         public virtual ICollection<Practice> Practices { get; set; }
         public virtual ApplicationUser SubmitterUser { get; set; }
     }
@@ -26,7 +28,13 @@ namespace Entities
                    .HasForeignKey(x => x.SubmitterUserId)
                    .OnDelete(DeleteBehavior.Restrict);
 
+            builder.HasOne(x => x.Gym)
+                   .WithMany(g => g.PracticeCategories)
+                   .HasForeignKey(x => x.GymId)
+                   .OnDelete(DeleteBehavior.Restrict);
+
             builder.HasIndex(x => x.SubmitterUserId);
+            builder.HasIndex(x => x.GymId);
         }
     }
 }

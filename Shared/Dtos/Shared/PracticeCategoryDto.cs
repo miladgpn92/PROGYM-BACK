@@ -16,6 +16,7 @@ namespace SharedModels.Dtos.Shared
 
     public class PracticeCategorySelectDto : SimpleBaseDto<PracticeCategorySelectDto, PracticeCategory>
     {
+        public int GymId { get; set; }
         public string Title { get; set; }
         public string ApplicationUserName { get; set; }
         public string ApplicationUserFamily { get; set; }

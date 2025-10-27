@@ -36,6 +36,7 @@ namespace Services.Services.CMS.PracticeCategory
 
             var entity = dto.ToEntity(_mapper);
             entity.SubmitterUserId = userId;
+            entity.GymId = gymId;
             await _repository.AddAsync(entity, cancellationToken);
 
             var model = PracticeCategorySelectDto.FromEntity(_mapper, entity);
@@ -49,7 +50,7 @@ namespace Services.Services.CMS.PracticeCategory
             if (!hasAccess)
                 return new ResponseModel(false, "دسترسی ندارید");
 
-            var entity = await _repository.Table.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+            var entity = await _repository.Table.FirstOrDefaultAsync(x => x.Id == id && x.GymId == gymId, cancellationToken);
             if (entity == null)
                 return new ResponseModel(false, "یافت نشد");
 
@@ -67,7 +68,7 @@ namespace Services.Services.CMS.PracticeCategory
             if (!hasAccess)
                 return new ResponseModel(false, "  دسترسی ندارید");
 
-            var entity = await _repository.Table.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+            var entity = await _repository.Table.FirstOrDefaultAsync(x => x.Id == id && x.GymId == gymId, cancellationToken);
             if (entity == null)
                 return new ResponseModel(false, "یافت نشد");
 
@@ -85,7 +86,8 @@ namespace Services.Services.CMS.PracticeCategory
             if (!hasAccess)
                 return new ResponseModel<PagedResult<PracticeCategorySelectDto>>(false, null, "Access denied");
 
-            var query = _repository.TableNoTracking;
+            var query = _repository.TableNoTracking
+                .Where(x => x.GymId == gymId);
             if (!string.IsNullOrWhiteSpace(q))
                 query = query.Where(x => x.Title.Contains(q));
 

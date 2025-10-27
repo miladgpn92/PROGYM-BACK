@@ -48,7 +48,7 @@ namespace Services.Services.CMS.Practices
 
             // Validate category exists to avoid FK violation
             if (!dto.PracticeCategoryId.HasValue ||
-                !await _categoryRepo.TableNoTracking.AnyAsync(c => c.Id == dto.PracticeCategoryId.Value, cancellationToken))
+                !await _categoryRepo.TableNoTracking.AnyAsync(c => c.Id == dto.PracticeCategoryId.Value && c.GymId == gymId, cancellationToken))
             {
                 return new ResponseModel<PracticeSelectDto>(false, null, "Invalid PracticeCategoryId");
             }
@@ -105,7 +105,7 @@ namespace Services.Services.CMS.Practices
             if (dto.PracticeCategoryId.HasValue)
             {
                 var catId = dto.PracticeCategoryId.Value;
-                var catExists = await _categoryRepo.TableNoTracking.AnyAsync(c => c.Id == catId, cancellationToken);
+                var catExists = await _categoryRepo.TableNoTracking.AnyAsync(c => c.Id == catId && c.GymId == gymId, cancellationToken);
                 if (!catExists)
                     return new ResponseModel(false, "Invalid PracticeCategoryId");
                 entity.PracticeCategoryId = catId;

@@ -40,6 +40,7 @@ namespace Entities
         public virtual ICollection<GymUser> GymUsers { get; set; }
         public virtual ICollection<Practice> Practices { get; set; }
         public virtual ICollection<Program> Programs { get; set; }
+        public virtual ICollection<PracticeCategory> PracticeCategories { get; set; }
 
         public long FileUsageBytes { get; set; }
 
@@ -103,6 +104,11 @@ namespace Entities
             builder.HasMany(x => x.Programs)
                    .WithOne(p => p.Gym)
                    .HasForeignKey(p => p.GymId)
+                   .OnDelete(DeleteBehavior.Restrict);
+
+            builder.HasMany(x => x.PracticeCategories)
+                   .WithOne(pc => pc.Gym)
+                   .HasForeignKey(pc => pc.GymId)
                    .OnDelete(DeleteBehavior.Restrict);
 
             builder.HasMany(x => x.GymFiles)
