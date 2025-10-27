@@ -10,6 +10,9 @@ using Data.Repositories;
 using Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
+using Services.Services;
 using SharedModels.Dtos.Shared;
 
 namespace Services.Services.CMS.GymStaff
@@ -18,11 +21,25 @@ namespace Services.Services.CMS.GymStaff
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IRepository<GymUser> _gymUserRepo;
+        private readonly IRepository<Entities.Gym> _gymRepo;
+        private readonly ISMSService _smsService;
+        private readonly ProjectSettings _projectSettings;
+        private readonly IHostEnvironment _environment;
 
-        public GymStaffService(UserManager<ApplicationUser> userManager, IRepository<GymUser> gymUserRepo)
+        public GymStaffService(
+            UserManager<ApplicationUser> userManager,
+            IRepository<GymUser> gymUserRepo,
+            IRepository<Entities.Gym> gymRepo,
+            ISMSService smsService,
+            IOptionsSnapshot<ProjectSettings> settings,
+            IHostEnvironment environment)
         {
             _userManager = userManager;
             _gymUserRepo = gymUserRepo;
+            _gymRepo = gymRepo;
+            _smsService = smsService;
+            _projectSettings = settings.Value;
+            _environment = environment;
         }
 
         public async Task<ResponseModel<int>> CreateAsync(int gymId, int managerId, GymStaffCreateDto dto, CancellationToken cancellationToken)
@@ -33,6 +50,10 @@ namespace Services.Services.CMS.GymStaff
             var hasAccess = await ManagerHasAccessAsync(gymId, managerId, cancellationToken);
             if (!hasAccess)
                 return new ResponseModel<int>(false, 0, "Unauthorized manager for this gym");
+
+            var gym = await _gymRepo.TableNoTracking.FirstOrDefaultAsync(g => g.Id == gymId, cancellationToken);
+            if (gym == null)
+                return new ResponseModel<int>(false, 0, "Gym not found");
 
             var user = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == dto.PhoneNumber, cancellationToken);
             var isNewUser = user == null;
@@ -96,6 +117,7 @@ namespace Services.Services.CMS.GymStaff
             }
 
             var link = await _gymUserRepo.Table.FirstOrDefaultAsync(gu => gu.GymId == gymId && gu.UserId == user.Id, cancellationToken);
+            var membershipCreated = link == null;
             if (link == null)
             {
                 link = new GymUser
@@ -111,6 +133,11 @@ namespace Services.Services.CMS.GymStaff
             {
                 link.Role = dto.Role;
                 await _gymUserRepo.UpdateAsync(link, cancellationToken);
+            }
+
+            if (membershipCreated)
+            {
+                await TrySendWelcomeSmsAsync(user, gym);
             }
 
             return new ResponseModel<int>(true, user.Id);
@@ -292,6 +319,36 @@ namespace Services.Services.CMS.GymStaff
             var roleName = role.ToString();
             if (!await _userManager.IsInRoleAsync(user, roleName))
                 await _userManager.AddToRoleAsync(user, roleName);
+        }
+
+        private async Task TrySendWelcomeSmsAsync(ApplicationUser user, Entities.Gym gym)
+        {
+            if (!_environment.IsProduction())
+                return;
+
+            if (user == null || string.IsNullOrWhiteSpace(user.PhoneNumber) || gym == null)
+                return;
+
+            var projectSetting = _projectSettings?.ProjectSetting;
+            if (projectSetting == null ||
+                string.IsNullOrWhiteSpace(projectSetting.SMSToken) ||
+                string.IsNullOrWhiteSpace(projectSetting.BaseUrl))
+                return;
+
+            var gymName = string.IsNullOrWhiteSpace(gym.Title) ? "باشگاه" : gym.Title;
+            var message = $"به {gymName} خوش آمدید ، جهت استفاده از لینک زیر استفاده کنید : https://app.pro-gym.ir";
+
+            try
+            {
+                await _smsService.SendSMSAsync(projectSetting.SMSToken,
+                    projectSetting.BaseUrl,
+                    user.PhoneNumber,
+                    message);
+            }
+            catch
+            {
+                // ignore sms failures
+            }
         }
     }
 }

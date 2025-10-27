@@ -6,6 +6,9 @@ using DariaCMS.Common;
 using Data.Repositories;
 using Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
+using Services.Services;
 using SharedModels.Dtos.Shared;
 using System;
 using System.Collections.Generic;
@@ -24,6 +27,9 @@ namespace Services.Services.CMS.Programs
         private readonly IRepository<GymUser> _gymUserRepo;
         private readonly IRepository<Entities.Practice> _practiceRepo;
         private readonly IMapper _mapper;
+        private readonly ISMSService _smsService;
+        private readonly ProjectSettings _projectSettings;
+        private readonly IHostEnvironment _environment;
 
         public ProgramService(
             IRepository<Entities.Program> programRepo,
@@ -32,7 +38,10 @@ namespace Services.Services.CMS.Programs
             IRepository<GymUser> gymUserRepo,
             IRepository<Entities.Practice> practiceRepo,
             IRepository<UserProgram> userProgramRepo,
-            IMapper mapper)
+            IMapper mapper,
+            ISMSService smsService,
+            IOptionsSnapshot<ProjectSettings> settings,
+            IHostEnvironment environment)
         {
             _programRepo = programRepo;
             _programRoutineItemRepo = programRoutineItemRepo;
@@ -41,6 +50,9 @@ namespace Services.Services.CMS.Programs
             _practiceRepo = practiceRepo;
             _userProgramRepo = userProgramRepo;
             _mapper = mapper;
+            _smsService = smsService;
+            _projectSettings = settings.Value;
+            _environment = environment;
         }
 
         public async Task<ResponseModel<ProgramSelectDto>> CreateAsync(int gymId, int userId, ProgramDto dto, CancellationToken cancellationToken)
@@ -475,9 +487,11 @@ namespace Services.Services.CMS.Programs
             if (program == null)
                 return new ResponseModel(false, "Program not found");
 
-            var athleteInGym = await _gymUserRepo.TableNoTracking
-                .AnyAsync(g => g.GymId == gymId && g.UserId == athleteUserId, cancellationToken);
-            if (!athleteInGym)
+            var athleteLink = await _gymUserRepo.TableNoTracking
+                .Include(g => g.User)
+                .Include(g => g.Gym)
+                .FirstOrDefaultAsync(g => g.GymId == gymId && g.UserId == athleteUserId, cancellationToken);
+            if (athleteLink == null)
                 return new ResponseModel(false, "Athlete is not a member of the current gym");
 
             var existing = await _userProgramRepo.TableNoTracking
@@ -494,7 +508,38 @@ namespace Services.Services.CMS.Programs
             };
 
             await _userProgramRepo.AddAsync(entity, cancellationToken);
+            await TrySendProgramAssignmentSmsAsync(athleteLink);
             return new ResponseModel(true, "");
+        }
+
+        private async Task TrySendProgramAssignmentSmsAsync(GymUser athleteLink)
+        {
+            if (!_environment.IsProduction())
+                return;
+
+            if (athleteLink?.User == null || string.IsNullOrWhiteSpace(athleteLink.User.PhoneNumber))
+                return;
+
+            var projectSetting = _projectSettings?.ProjectSetting;
+            if (projectSetting == null ||
+                string.IsNullOrWhiteSpace(projectSetting.SMSToken) ||
+                string.IsNullOrWhiteSpace(projectSetting.BaseUrl))
+                return;
+
+            var gymName = string.IsNullOrWhiteSpace(athleteLink.Gym?.Title) ? "باشگاه" : athleteLink.Gym.Title;
+            var message = $"برنامه جدیدی برای شما در {gymName} اضافه شد . https://app.pro-gym.ir";
+
+            try
+            {
+                await _smsService.SendSMSAsync(projectSetting.SMSToken,
+                    projectSetting.BaseUrl,
+                    athleteLink.User.PhoneNumber,
+                    message);
+            }
+            catch
+            {
+                // ignore sms failures
+            }
         }
 
         public async Task<ResponseModel> DeAttachAthleteAsync(

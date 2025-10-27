@@ -11,6 +11,7 @@ using Data.Repositories;
 using Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Services.Services.CMS.Athletes;
 using Services.Services;
@@ -28,6 +29,7 @@ namespace Services.Services.CMS.Athletes
         private readonly IMapper _mapper;
         private readonly ISMSService _smsService;
         private readonly ProjectSettings _projectSettings;
+        private readonly IHostEnvironment _environment;
 
         public AthleteService(
             UserManager<ApplicationUser> userManager,
@@ -37,7 +39,8 @@ namespace Services.Services.CMS.Athletes
             IRepository<UserProgram> userProgramRepo,
             IMapper mapper,
             ISMSService smsService,
-            IOptionsSnapshot<ProjectSettings> settings)
+            IOptionsSnapshot<ProjectSettings> settings,
+            IHostEnvironment environment)
         {
             _userManager = userManager;
             _gymUserRepo = gymUserRepo;
@@ -47,6 +50,7 @@ namespace Services.Services.CMS.Athletes
             _mapper = mapper;
             _smsService = smsService;
             _projectSettings = settings.Value;
+            _environment = environment;
         }
 
         public async Task<ResponseModel<int>> CreateOrJoinAsync(int gymId, int managerId, AthleteCreateDto dto, CancellationToken cancellationToken)
@@ -109,15 +113,29 @@ namespace Services.Services.CMS.Athletes
             }
 
             // Send SMS notification
-            var text = $"You joined to {gym.Title}";
-            try
+            if (_environment.IsProduction())
             {
-                await _smsService.SendSMSAsync(_projectSettings.ProjectSetting.SMSToken,
-                    _projectSettings.ProjectSetting.BaseUrl,
-                    user.PhoneNumber,
-                    text);
+                var projectSetting = _projectSettings?.ProjectSetting;
+                if (projectSetting != null &&
+                    !string.IsNullOrWhiteSpace(projectSetting.SMSToken) &&
+                    !string.IsNullOrWhiteSpace(projectSetting.BaseUrl) &&
+                    !string.IsNullOrWhiteSpace(user.PhoneNumber))
+                {
+                    var gymName = string.IsNullOrWhiteSpace(gym?.Title) ? "باشگاه" : gym.Title;
+                    var text = $"به {gymName} خوش آمدید ، جهت استفاده از لینک زیر استفاده کنید : https://app.pro-gym.ir";
+                    try
+                    {
+                        await _smsService.SendSMSAsync(projectSetting.SMSToken,
+                            projectSetting.BaseUrl,
+                            user.PhoneNumber,
+                            text);
+                    }
+                    catch
+                    {
+                        // ignore sms failures
+                    }
+                }
             }
-            catch { /* ignore sms failures */ }
 
             return new ResponseModel<int>(true, user.Id);
         }

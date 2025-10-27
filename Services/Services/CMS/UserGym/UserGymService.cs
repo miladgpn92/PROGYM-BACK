@@ -6,10 +6,14 @@ using System.Threading.Tasks;
 using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using Common;
+using Common.Enums;
 using Data.Repositories;
 using Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
+using Services.Services;
 using SharedModels.Dtos.Shared;
 
 namespace Services.Services.CMS.UserGym
@@ -20,17 +24,26 @@ namespace Services.Services.CMS.UserGym
         private readonly IRepository<Entities.Gym> gymRepository;
         private readonly UserManager<ApplicationUser> userManager;
         private readonly IMapper mapper;
+        private readonly ISMSService smsService;
+        private readonly ProjectSettings projectSettings;
+        private readonly IHostEnvironment environment;
 
         public UserGymService(
             IRepository<GymUser> MainRepository,
             IRepository<Entities.Gym> GymRepository,
             UserManager<ApplicationUser> UserManager,
-            IMapper Mapper)
+            IMapper Mapper,
+            ISMSService smsService,
+            IOptionsSnapshot<ProjectSettings> settings,
+            IHostEnvironment environment)
         {
             mainRepository = MainRepository;
             gymRepository = GymRepository;
             userManager = UserManager;
             mapper = Mapper;
+            this.smsService = smsService;
+            projectSettings = settings.Value;
+            this.environment = environment;
         }
 
         public async Task<ResponseModel<List<UserGymDto>>> GetUserInfo(int UserId, CancellationToken cancellationToken)
@@ -89,8 +102,8 @@ namespace Services.Services.CMS.UserGym
                 return new ResponseModel(false, "User payload is missing.");
             }
 
-            var gymExists = await gymRepository.TableNoTracking.AnyAsync(g => g.Id == gymId, cancellationToken);
-            if (!gymExists)
+            var gym = await gymRepository.TableNoTracking.FirstOrDefaultAsync(g => g.Id == gymId, cancellationToken);
+            if (gym == null)
             {
                 return new ResponseModel(false, "Gym not found.");
             }
@@ -184,7 +197,45 @@ namespace Services.Services.CMS.UserGym
 
             await mainRepository.AddAsync(gymUser, cancellationToken);
 
+            if (IsMemberRole(dto.Role))
+            {
+                await TrySendWelcomeSmsAsync(user.PhoneNumber ?? string.Empty, gym);
+            }
+
             return new ResponseModel(true);
+        }
+
+        private static bool IsMemberRole(UsersRole role) =>
+            role == UsersRole.manager || role == UsersRole.coach || role == UsersRole.staff || role == UsersRole.athlete;
+
+        private async Task TrySendWelcomeSmsAsync(string phoneNumber, Entities.Gym gym)
+        {
+            if (!environment.IsProduction())
+                return;
+
+            if (string.IsNullOrWhiteSpace(phoneNumber) || gym == null)
+                return;
+
+            var projectSetting = projectSettings?.ProjectSetting;
+            if (projectSetting == null ||
+                string.IsNullOrWhiteSpace(projectSetting.SMSToken) ||
+                string.IsNullOrWhiteSpace(projectSetting.BaseUrl))
+                return;
+
+            var gymName = string.IsNullOrWhiteSpace(gym.Title) ? "باشگاه" : gym.Title;
+            var message = $"به {gymName} خوش آمدید ، جهت استفاده از لینک زیر استفاده کنید : https://app.pro-gym.ir";
+
+            try
+            {
+                await smsService.SendSMSAsync(projectSetting.SMSToken,
+                    projectSetting.BaseUrl,
+                    phoneNumber,
+                    message);
+            }
+            catch
+            {
+                // ignore sms failures
+            }
         }
     }
 }
