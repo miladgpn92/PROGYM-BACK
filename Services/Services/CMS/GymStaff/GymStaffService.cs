@@ -77,7 +77,9 @@ namespace Services.Services.CMS.GymStaff
                 if (!createRes.Succeeded)
                     return new ResponseModel<int>(false, 0, createRes.Errors.FirstOrDefault()?.Description ?? "Create user failed");
 
-                await EnsureRoleAsync(user, dto.Role);
+                var roleAssignRes = await EnsureRoleAsync(user, dto.Role);
+                if (!roleAssignRes.Succeeded)
+                    return new ResponseModel<int>(false, 0, roleAssignRes.Errors.FirstOrDefault()?.Description ?? "Assign role failed");
 
                 var defaultPwd = dto.PhoneNumber?.Length >= 6 ? dto.PhoneNumber[^6..] : dto.PhoneNumber;
                 if (!string.IsNullOrWhiteSpace(defaultPwd))
@@ -109,7 +111,9 @@ namespace Services.Services.CMS.GymStaff
                     user.UserRole = dto.Role;
                 }
 
-                await EnsureRoleAsync(user, dto.Role);
+                var roleAssignRes = await EnsureRoleAsync(user, dto.Role);
+                if (!roleAssignRes.Succeeded)
+                    return new ResponseModel<int>(false, 0, roleAssignRes.Errors.FirstOrDefault()?.Description ?? "Assign role failed");
 
                 var updateRes = await _userManager.UpdateAsync(user);
                 if (!updateRes.Succeeded)
@@ -266,7 +270,9 @@ namespace Services.Services.CMS.GymStaff
                 user.UserRole = dto.Role;
             }
 
-            await EnsureRoleAsync(user, dto.Role);
+            var roleAssignRes = await EnsureRoleAsync(user, dto.Role);
+            if (!roleAssignRes.Succeeded)
+                return new ResponseModel(false, roleAssignRes.Errors.FirstOrDefault()?.Description ?? "Assign role failed");
 
             var updateRes = await _userManager.UpdateAsync(user);
             if (!updateRes.Succeeded)
@@ -314,11 +320,13 @@ namespace Services.Services.CMS.GymStaff
         private static bool IsStaffRole(UsersRole role) =>
             role == UsersRole.manager || role == UsersRole.coach || role == UsersRole.staff;
 
-        private async Task EnsureRoleAsync(ApplicationUser user, UsersRole role)
+        private async Task<IdentityResult> EnsureRoleAsync(ApplicationUser user, UsersRole role)
         {
             var roleName = role.ToString();
-            if (!await _userManager.IsInRoleAsync(user, roleName))
-                await _userManager.AddToRoleAsync(user, roleName);
+            if (await _userManager.IsInRoleAsync(user, roleName))
+                return IdentityResult.Success;
+
+            return await _userManager.AddToRoleAsync(user, roleName);
         }
 
         private async Task TrySendWelcomeSmsAsync(ApplicationUser user, Entities.Gym gym)

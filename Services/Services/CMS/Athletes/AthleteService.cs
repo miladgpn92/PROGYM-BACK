@@ -100,7 +100,17 @@ namespace Services.Services.CMS.Athletes
                 user.Family = dto.Family;
                 user.Gender = dto.Gender;
                 user.BirthDate = dto.BirthDate;
-                await _userManager.UpdateAsync(user);
+                var updateRes = await _userManager.UpdateAsync(user);
+                if (!updateRes.Succeeded)
+                    return new ResponseModel<int>(false, 0, updateRes.Errors.FirstOrDefault()?.Description ?? "Update user failed");
+
+                var athleteRoleName = UsersRole.athlete.ToString();
+                if (!await _userManager.IsInRoleAsync(user, athleteRoleName))
+                {
+                    var addRoleRes = await _userManager.AddToRoleAsync(user, athleteRoleName);
+                    if (!addRoleRes.Succeeded)
+                        return new ResponseModel<int>(false, 0, addRoleRes.Errors.FirstOrDefault()?.Description ?? "Assign athlete role failed");
+                }
             }
 
             // Join to current gym if not already

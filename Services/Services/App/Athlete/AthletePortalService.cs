@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using Common;
+using Common.Consts;
 using Common.Enums;
 using DariaCMS.Common;
 using Data.Repositories;
@@ -72,7 +73,8 @@ namespace Services.Services.App.Athlete
         public async Task<ResponseModel<int>> AddAthleteDataAsync(int userId, AthleteDataCreateDto dto, CancellationToken cancellationToken)
         {
             var user = await _userManager.FindByIdAsync(userId.ToString());
-            if (user == null || user.UserRole != UsersRole.athlete)
+            var IsInRole = await _userManager.IsInRoleAsync(user, RoleConsts.Athlete);
+            if (user == null || !IsInRole)
                 return new ResponseModel<int>(false, 0, "User not found or invalid role");
 
             var entity = new AthleteData
@@ -205,7 +207,8 @@ namespace Services.Services.App.Athlete
         public async Task<ResponseModel<ProfileDto>> GetProfileAsync(int userId, CancellationToken cancellationToken)
         {
             var user = await _userManager.FindByIdAsync(userId.ToString());
-            if (user == null || user.UserRole != UsersRole.athlete)
+            var IsInRole =await _userManager.IsInRoleAsync(user, RoleConsts.Athlete);
+            if (user == null || !IsInRole)
                 return new ResponseModel<ProfileDto>(false, null, "User not found");
 
             var dto = new ProfileDto
@@ -224,7 +227,8 @@ namespace Services.Services.App.Athlete
         public async Task<ResponseModel> UpdateProfileAsync(int userId, AthleteProfileUpdateDto dto, CancellationToken cancellationToken)
         {
             var user = await _userManager.FindByIdAsync(userId.ToString());
-            if (user == null || user.UserRole != UsersRole.athlete)
+            var IsInRole = await _userManager.IsInRoleAsync(user, RoleConsts.Athlete);
+            if (user == null || !IsInRole)
                 return new ResponseModel(false, "User not found");
 
             user.Name = dto.Name;
