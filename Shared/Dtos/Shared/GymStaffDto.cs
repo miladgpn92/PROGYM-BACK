@@ -17,6 +17,8 @@ namespace SharedModels.Dtos.Shared
         [Required]
         public Gender Gender { get; set; }
 
+        public string PicUrl { get; set; }
+
         [Required]
         [EnumDataType(typeof(UsersRole))]
         public UsersRole Role { get; set; }
@@ -36,6 +38,8 @@ namespace SharedModels.Dtos.Shared
         [Required]
         public Gender Gender { get; set; }
 
+        public string PicUrl { get; set; }
+
         [Required]
         [EnumDataType(typeof(UsersRole))]
         public UsersRole Role { get; set; }
@@ -49,6 +53,7 @@ namespace SharedModels.Dtos.Shared
         public string PhoneNumber { get; set; }
         public Gender? Gender { get; set; }
         public UsersRole Role { get; set; }
+        public string PicUrl { get; set; }
         public System.DateTime CreateDate { get; set; }
     }
 }

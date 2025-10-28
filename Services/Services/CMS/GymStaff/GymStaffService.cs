@@ -66,6 +66,7 @@ namespace Services.Services.CMS.GymStaff
                     Family = dto.Family,
                     PhoneNumber = dto.PhoneNumber,
                     Gender = dto.Gender,
+                    PicUrl = dto.PicUrl,
                     UserName = dto.PhoneNumber,
                     PhoneNumberConfirmed = true,
                     IsActive = true,
@@ -93,6 +94,7 @@ namespace Services.Services.CMS.GymStaff
                 user.Name = dto.Name;
                 user.Family = dto.Family;
                 user.Gender = dto.Gender;
+                user.PicUrl = dto.PicUrl;
 
                 if (!string.Equals(user.PhoneNumber, dto.PhoneNumber, StringComparison.Ordinal))
                 {
@@ -166,6 +168,7 @@ namespace Services.Services.CMS.GymStaff
                             Family = u.Family,
                             PhoneNumber = u.PhoneNumber,
                             Gender = u.Gender,
+                            PicUrl = u.PicUrl,
                             Role = gu.Role,
                             CreateDate = u.CreateDate
                         };
@@ -226,6 +229,7 @@ namespace Services.Services.CMS.GymStaff
                 Family = user.Family,
                 PhoneNumber = user.PhoneNumber,
                 Gender = user.Gender,
+                PicUrl = user.PicUrl,
                 Role = member.Role,
                 CreateDate = user.CreateDate
             };
@@ -262,6 +266,7 @@ namespace Services.Services.CMS.GymStaff
             user.Name = dto.Name;
             user.Family = dto.Family;
             user.Gender = dto.Gender;
+            user.PicUrl = dto.PicUrl;
 
             if (user.UserRole != dto.Role)
             {
