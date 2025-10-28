@@ -11,7 +11,7 @@ new AdminBarCustomModel()
 {
 Icon = "dashboard",
 Link = "/dtcms",
-Text = "\u062F\u0627\u0634\u0628\u0648\u0631\u062F"
+Text = "پیشخوان"
 }
 };
 
@@ -57,10 +57,10 @@ Text = "\u062F\u0627\u0634\u0628\u0648\u0631\u062F"
                         </svg>
 
 
-                        پرو جیم
+                       پروجیم
                     </h1>
                     <p class="text-base leading-8 text-white/70 sm:text-lg">
-                        @("\u067E\u0631\u0648\u0020\u062C\u06CC\u0645\u0020\u06CC\u06A9\u0020\u0627\u067E\u0644\u06CC\u06A9\u06CC\u0634\u0646\u0020\u0647\u0648\u0634\u0645\u0646\u062F\u0020\u0645\u062F\u06CC\u0631\u06CC\u062A\u0020\u0641\u06CC\u062A\u0646\u0633\u0020\u0627\u0633\u062A\u0020\u06A9\u0647\u0020\u0628\u0647\u0020\u0645\u0631\u0628\u06CC\u0627\u0646\u0020\u06A9\u0645\u06A9\u0020\u0645\u06CC\u200C\u06A9\u0646\u062F\u0020\u0628\u0631\u0646\u0627\u0645\u0647\u200C\u0647\u0627\u06CC\u0020\u062A\u0645\u0631\u06CC\u0646\u06CC\u0020\u0628\u0633\u0627\u0632\u0646\u062F\u060C\u0020\u06A9\u0627\u0631\u0628\u0631\u0627\u0646\u0020\u0631\u0627\u0020\u067E\u06CC\u06AF\u06CC\u0631\u06CC\u0020\u06A9\u0646\u0646\u062F\u0020\u0648\u0020\u0647\u0645\u0647\u0020\u0627\u0645\u0648\u0631\u0020\u0648\u0631\u0632\u0634\u06CC\u0020\u0631\u0627\u0020\u062F\u0631\u0020\u06CC\u06A9\u062C\u0627\u0020\u0645\u062F\u06CC\u0631\u06CC\u062A\u0020\u06A9\u0646\u0646\u062F\u002E")
+                        پروجم یک اپلیکیشن هوشمند مدیریت فیتنس است که به مربیان کمک می‌کند برنامه‌های تمرینی بسازند، کاربران را پیگیری کنند و همه امور ورزشی را در یکجا مدیریت کنند
                     </p>
                 </div>
             </div>
@@ -68,25 +68,38 @@ Text = "\u062F\u0627\u0634\u0628\u0648\u0631\u062F"
 
         <section class="w-full max-w-6xl">
             <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
-                @for (int i = 0; i < 6; i++)
+                @if (Model.LatestGyms != null && Model.LatestGyms.Count > 0)
                 {
-                    <article
-                        class="flex items-center justify-between rounded-2xl bg-white p-6 shadow-lg shadow-black/20 transition hover:translate-y-[-2px]">
-                     
-                          <div class="flex flex-col gap-1">
-                            <h3 class="text-lg font-semibold text-[#131449]">
-                              باشگاه پرو اسپرت
-                            </h3>
-                            <p class="text-sm text-[#131449]">
-                              مازندران ، آمل
-                            </p>
-                        </div>
-                     
-                        <div class="flex h-20 w-20 items-center justify-center rounded-xl bg-black">
-                                <img src="https://localhost:59990/gym-files/2/b11b287db2ad424a9be9bd549349a876.webp" class="w-full h-full object-cover rounded-lg" alt="">
-                        </div>
-                   
-                    </article>
+                    foreach (var gym in Model.LatestGyms)
+                    {
+                        <a href="/g/@gym.Slug"
+                           class="flex items-center justify-between rounded-2xl bg-white p-6 shadow-lg shadow-black/20 transition hover:translate-y-[-2px]">
+                            <div class="flex flex-col gap-1 text-right">
+                                <h3 class="text-lg font-semibold text-[#131449]">
+                                    @gym.Title
+                                </h3>
+                                <p class="text-sm text-[#131449] text-opacity-80">
+                                    @gym.Address
+                                </p>
+                            </div>
+                            <div class="flex h-20 w-20 items-center justify-center rounded-xl bg-black">
+                                @if (!string.IsNullOrWhiteSpace(gym.LogoUrl))
+                                {
+                                    <img src="@gym.LogoUrl"
+                                         class="h-full w-full rounded-lg object-cover"
+                                         alt="@gym.Title" />
+                                }
+                                else
+                                {
+                                    <span class="text-sm font-semibold text-white/70">بدون لوگو</span>
+                                }
+                            </div>
+                        </a>
+                    }
+                }
+                else
+                {
+                    <div class="col-span-full rounded-2xl bg-white/5 p-6 text-center text-white/70">باشگاهی برای نمایش وجود ندارد.</div>
                 }
             </div>
         </section>
