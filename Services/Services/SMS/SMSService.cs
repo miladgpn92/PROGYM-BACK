@@ -64,6 +64,7 @@ namespace Services.Services
   
         public async Task<ResponseModel> SendSMSAsync(string UserToken, string Url, string to, string text)
         {
+            Url = "https://localhost:7279";
             string url = $"https://sms.dariatech.com/api/v1/Payment/SendSMS?UserToken={UserToken}&CustomerUrl={Url}&Phonenumber={to}&Text={text}";
 
             // Create an HttpClient instance
