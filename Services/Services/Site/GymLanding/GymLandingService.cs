@@ -38,5 +38,36 @@ namespace Services.Services.Site.GymLanding
                 .Take(count)
                 .ToListAsync(cancellationToken);
         }
+
+        public async Task<GymLandingDetailDto?> GetGymBySlugAsync(string slug, CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(slug))
+            {
+                return null;
+            }
+
+            var language = CmsEx.GetCurrentLanguage();
+            slug = slug.Trim();
+
+            return await _gymRepository.TableNoTracking
+                .Where(g => g.CmsLanguage == language && g.Slug == slug)
+                .Select(g => new GymLandingDetailDto
+                {
+                    Id = g.Id,
+                    Title = g.Title,
+                    Address = g.Address,
+                    LogoUrl = g.LogoUrl,
+                    Slug = g.Slug,
+                    ContactUsPhoneNumber = g.ContactUsPhoneNumber,
+                    Phone = g.Phone,
+                    Lat = g.Lat,
+                    Lng = g.Lng,
+                    InstagramLink = g.InstagramLink,
+                    TelegramLink = g.TelegramLink,
+                    EitaaLink = g.EitaaLink,
+                    BaleLink = g.BaleLink
+                })
+                .FirstOrDefaultAsync(cancellationToken);
+        }
     }
 }

@@ -9,5 +9,6 @@ namespace Services.Services.Site.GymLanding
     public interface IGymLandingService : IScopedDependency
     {
         Task<List<GymLandingListItemDto>> GetLatestGymsAsync(int count, CancellationToken cancellationToken);
+        Task<GymLandingDetailDto?> GetGymBySlugAsync(string slug, CancellationToken cancellationToken);
     }
 }
