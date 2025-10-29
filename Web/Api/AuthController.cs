@@ -60,7 +60,7 @@ namespace Web.Api
         [HttpGet("[action]")]
         public async Task<ActionResult> CreateRolesProject(CancellationToken cancellationToken)
         {
-
+            SentrySdk.CaptureMessage("Hello Sentry");
             var res = await _authService.CreateRolesProject();
             if (res.IsSuccess)
                 return Ok(res.Description);

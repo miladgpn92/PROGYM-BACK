@@ -39,6 +39,15 @@ using Microsoft.IdentityModel.Logging;
 
 var builder = WebApplication.CreateBuilder(args);
 
+if (builder.Environment.IsProduction())
+{
+    builder.WebHost.UseSentry(o =>
+    {
+        o.Dsn = "https://2d62ea69c2df15f1e1d2c5a9ba494097@o4510271660621824.ingest.de.sentry.io/4510271707545680";
+        o.Debug = true;
+    });
+}
+
 // فعال کردن نمایش جزئیات خطا
 IdentityModelEventSource.ShowPII = true;
 
