@@ -18,6 +18,8 @@ namespace SharedModels.Dtos.Shared
         public UsersRole Role { get; set; }
         public string GymTitle { get; set; }
         public string GymLogoUrl { get; set; }
+        public string GymSlug { get; set; }
+
         public DateTime JoinDate { get; set; }
     }
     public class UserGymDtoMapping : IHaveCustomMapping
@@ -27,7 +29,8 @@ namespace SharedModels.Dtos.Shared
             profile.CreateMap<UserGymDto, GymUser>();
             profile.CreateMap<GymUser, UserGymDto>()
                    .ForMember(d => d.GymTitle, opt => opt.MapFrom(s => s.Gym.Title))
-                   .ForMember(d => d.GymLogoUrl, opt => opt.MapFrom(s => s.Gym.LogoUrl));
+                   .ForMember(d => d.GymLogoUrl, opt => opt.MapFrom(s => s.Gym.LogoUrl))
+                    .ForMember(d => d.GymSlug, opt => opt.MapFrom(s => s.Gym.Slug));
         
         }
     }
