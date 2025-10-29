@@ -103,6 +103,18 @@ Text = "پیشخوان"
                 }
             </div>
         </section>
+
+        @if (Model.LatestGyms != null && Model.LatestGyms.Count > 0)
+        {
+            <div class="mt-12 flex justify-center">
+                <a href="/gyms"
+                   class="inline-flex items-center gap-2 rounded-full border border-white/30 px-6 py-3 text-sm font-semibold text-white transition hover:border-white hover:bg-white/10">
+                    مشاهده همه باشگاه‌ها
+                    <span aria-hidden="true" class="text-lg">&rarr;</span>
+                </a>
+            </div>
+        }
     </main>
 </div>
+
 

@@ -1,0 +1,148 @@
+﻿@page "/gyms"
+@using System.Collections.Generic
+@using Microsoft.AspNetCore.WebUtilities
+@model Web.Pages.Gyms.IndexModel
+@{
+    ViewData["Title"] = "لیست باشگاه‌ها";
+
+    var gyms = Model.Gyms.Items;
+    var totalCount = Model.Gyms.TotalCount;
+    var pageSize = Model.Gyms.PageSize > 0 ? Model.Gyms.PageSize : Model.Arg.PageSize;
+    var pageNumber = Model.Gyms.PageNumber > 0 ? Model.Gyms.PageNumber : Model.Arg.PageNumber;
+    pageSize = pageSize <= 0 ? 12 : pageSize;
+    pageNumber = pageNumber <= 0 ? 1 : pageNumber;
+
+    var totalPages = pageSize > 0 ? (int)Math.Ceiling(totalCount / (double)pageSize) : 0;
+    var startItem = totalCount == 0 ? 0 : ((pageNumber - 1) * pageSize) + 1;
+    var endItem = Math.Min(pageNumber * pageSize, totalCount);
+    var hasPrev = pageNumber > 1;
+    var hasNext = pageNumber < totalPages;
+
+    var basePath = Url.Page("/Gyms/Index") ?? "/gyms";
+
+    string PageUrl(int targetPage)
+    {
+        var query = new Dictionary<string, string?>
+        {
+            ["arg.PageNumber"] = targetPage.ToString(),
+            ["arg.PageSize"] = pageSize.ToString()
+        };
+
+        return QueryHelpers.AddQueryString(basePath, query);
+    }
+
+    var sizeOptions = new List<int> { 12, 24, 36, 48 };
+    if (!sizeOptions.Contains(pageSize))
+    {
+        sizeOptions.Add(pageSize);
+        sizeOptions.Sort();
+    }
+
+    var prevUrl = hasPrev ? PageUrl(pageNumber - 1) : "#";
+    var nextUrl = hasNext ? PageUrl(pageNumber + 1) : "#";
+}
+
+<div class="min-h-screen bg-[#1A1B1C] text-white flex flex-col pb-24">
+    <main class="flex flex-1 flex-col items-center px-6">
+        <section class="flex w-full max-w-3xl flex-col items-center text-center py-16">
+            <div class="flex flex-col items-center gap-5">
+                <h1 class="text-4xl font-black tracking-tight text-white sm:text-5xl">
+                    همه باشگاه‌ها
+                </h1>
+                <p class="max-w-2xl text-base leading-8 text-white/70 sm:text-lg">
+                    در این صفحه می‌توانید همه باشگاه‌های ثبت‌شده در پروجیم را ببینید و برای مشاهده جزئیات بیشتر وارد صفحه اختصاصی هر باشگاه شوید.
+                </p>
+            </div>
+        </section>
+
+        <section class="w-full max-w-6xl">
+            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
+                @if (gyms.Count > 0)
+                {
+                    foreach (var gym in gyms)
+                    {
+                        <a href="/g/@gym.Slug"
+                           class="flex items-center justify-between rounded-2xl bg-white p-6 shadow-lg shadow-black/20 transition hover:translate-y-[-2px]">
+                            <div class="flex flex-col gap-1 text-right">
+                                <h3 class="text-lg font-semibold text-[#131449]">
+                                    @gym.Title
+                                </h3>
+                                <p class="text-sm text-[#131449] text-opacity-80">
+                                    @gym.Address
+                                </p>
+                            </div>
+                            <div class="flex h-20 w-20 items-center justify-center rounded-xl bg-black">
+                                @if (!string.IsNullOrWhiteSpace(gym.LogoUrl))
+                                {
+                                    <img src="@gym.LogoUrl"
+                                         class="h-full w-full rounded-lg object-cover"
+                                         alt="@gym.Title" />
+                                }
+                                else
+                                {
+                                    <span class="text-sm font-semibold text-white/70">بدون لوگو</span>
+                                }
+                            </div>
+                        </a>
+                    }
+                }
+                else
+                {
+                    <div class="col-span-full rounded-2xl bg-white/5 p-6 text-center text-white/70">
+                        هنوز باشگاهی برای این صفحه ثبت نشده است.
+                    </div>
+                }
+            </div>
+        </section>
+
+        @if (totalCount > 0)
+        {
+            <section class="mt-12 و-full max-w-6xl">
+                <div class="flex flex-col gap-6 rounded-2xl bg-white/5 p-6 sm:flex-row sm:items-center sm:justify-between">
+                    <div class="text-sm text-white/60">
+                        نمایش @startItem تا @endItem از @totalCount باشگاه
+                    </div>
+
+                    <div class="flex flex-col items-center gap-4 sm:flex-row sm:gap-6">
+                        <form method="get" class="flex items-center gap-3 text-sm text-white/70">
+                            <label for="page-size" class="whitespace-nowrap">تعداد در صفحه</label>
+                            <input type="hidden" name="arg.PageNumber" value="1" />
+                            <select id="page-size"
+                                    name="arg.PageSize"
+                                    class="rounded-lg bg-[#1A1B1C] px-3 py-2 text-sm font-medium text-white/90 shadow-inner shadow-black/30 focus:outline-none focus:ring-2 focus:ring-white/50"
+                                    onchange="this.form.submit()">
+                                @foreach (var option in sizeOptions)
+                                {
+                                    <option value="@option" selected="@(option == pageSize ? "selected" : null)">
+                                        @option
+                                    </option>
+                                }
+                            </select>
+                        </form>
+
+                        <div class="flex items-center gap-3 text-sm font-medium">
+                            <a href="@prevUrl"
+                               class="flex items-center gap-2 rounded-full border border-white/20 px-4 py-2 transition hover:bg-white/10 @(hasPrev ? "" : "pointer-events-none opacity-40")"
+                               aria-disabled="@(!hasPrev)">
+                                <span aria-hidden="true" class="text-lg">&larr;</span>
+                                <span>صفحه قبل</span>
+                            </a>
+
+                            <span class="text-white/70">
+                                صفحه @pageNumber از @Math.Max(totalPages, 1)
+                            </span>
+
+                            <a href="@nextUrl"
+                               class="flex items-center gap-2 rounded-full border border-white/20 px-4 py-2 transition hover:bg-white/10 @(hasNext ? "" : "pointer-events-none opacity-40")"
+                               aria-disabled="@(!hasNext)">
+                                <span>صفحه بعد</span>
+                                <span aria-hidden="true" class="text-lg">&rarr;</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        }
+    </main>
+</div>
+
