@@ -5,6 +5,7 @@ using SharedModels.Api;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 
 namespace SharedModels.Dtos.Shared
 {
@@ -22,6 +23,8 @@ namespace SharedModels.Dtos.Shared
 
         [Display(Name = "Owner")]
         public int? OwnerId { get; set; }
+
+        public List<int> PaperFileIds { get; set; } = new();
         // SubmitterUserId is taken from authenticated user; do not accept from client
 
         // Routine items (single movement or superset) to attach on create
@@ -30,8 +33,10 @@ namespace SharedModels.Dtos.Shared
         public override void CustomMappings(AutoMapper.IMappingExpression<Program, ProgramDto> mapping)
         {
             mapping.ForMember(d => d.RoutineItems, opt => opt.Ignore());
+            mapping.ForMember(d => d.PaperFileIds, opt => opt.Ignore());
             mapping.ReverseMap()
-                   .ForMember(d => d.ProgramRoutineItems, opt => opt.Ignore());
+                   .ForMember(d => d.ProgramRoutineItems, opt => opt.Ignore())
+                   .ForMember(d => d.PaperFiles, opt => opt.Ignore());
         }
     }
 
@@ -48,6 +53,7 @@ namespace SharedModels.Dtos.Shared
         public string OwnerFamily { get; set; }
         public string SubmitterName { get; set; }
         public string SubmitterFamily { get; set; }
+        public List<int> PaperFileIds { get; set; } = new();
 
         public override void CustomMappings(AutoMapper.IMappingExpression<Program, ProgramSelectDto> mapping)
         {
@@ -55,6 +61,9 @@ namespace SharedModels.Dtos.Shared
             mapping.ForMember(d => d.OwnerFamily, opt => opt.MapFrom(s => s.Owner.Family));
             mapping.ForMember(d => d.SubmitterName, opt => opt.MapFrom(s => s.SubmitterUser.Name));
             mapping.ForMember(d => d.SubmitterFamily, opt => opt.MapFrom(s => s.SubmitterUser.Family));
+            mapping.ForMember(d => d.PaperFileIds, opt => opt.MapFrom(s => s.PaperFiles
+                .OrderBy(pf => pf.DisplayOrder)
+                .Select(pf => pf.GymFileId)));
         }
     }
 }

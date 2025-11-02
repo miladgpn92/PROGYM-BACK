@@ -26,6 +26,8 @@ namespace Services.Services.CMS.Programs
         private readonly IRepository<UserProgram> _userProgramRepo;
         private readonly IRepository<GymUser> _gymUserRepo;
         private readonly IRepository<Entities.Practice> _practiceRepo;
+        private readonly IRepository<ProgramPaperFile> _programPaperFileRepo;
+        private readonly IRepository<GymFile> _gymFileRepo;
         private readonly IMapper _mapper;
         private readonly ISMSService _smsService;
         private readonly ProjectSettings _projectSettings;
@@ -35,6 +37,8 @@ namespace Services.Services.CMS.Programs
             IRepository<Entities.Program> programRepo,
             IRepository<ProgramRoutineItem> programRoutineItemRepo,
             IRepository<ProgramPractice> programPracticeRepo,
+            IRepository<ProgramPaperFile> programPaperFileRepo,
+            IRepository<GymFile> gymFileRepo,
             IRepository<GymUser> gymUserRepo,
             IRepository<Entities.Practice> practiceRepo,
             IRepository<UserProgram> userProgramRepo,
@@ -46,6 +50,8 @@ namespace Services.Services.CMS.Programs
             _programRepo = programRepo;
             _programRoutineItemRepo = programRoutineItemRepo;
             _programPracticeRepo = programPracticeRepo;
+            _programPaperFileRepo = programPaperFileRepo;
+            _gymFileRepo = gymFileRepo;
             _gymUserRepo = gymUserRepo;
             _practiceRepo = practiceRepo;
             _userProgramRepo = userProgramRepo;
@@ -70,10 +76,23 @@ namespace Services.Services.CMS.Programs
                     return new ResponseModel<ProgramSelectDto>(false, null, "Owner not found in current gym");
             }
 
-            var routineInputs = dto.RoutineItems ?? new List<ProgramRoutineItemInputDto>();
-            var (isValid, validationMessage, plans) = await PrepareRoutinePlansAsync(gymId, routineInputs, cancellationToken);
-            if (!isValid)
-                return new ResponseModel<ProgramSelectDto>(false, null, validationMessage);
+            var routinePlans = new List<RoutineItemPlan>();
+            List<int> paperFileIds = new List<int>();
+            if (dto.Type == ProgramTypes.Paper)
+            {
+                var (isPaperValid, paperMessage, files) = await ValidatePaperProgramAsync(gymId, dto, cancellationToken);
+                if (!isPaperValid)
+                    return new ResponseModel<ProgramSelectDto>(false, null, paperMessage);
+                paperFileIds = files;
+            }
+            else
+            {
+                var routineInputs = dto.RoutineItems ?? new List<ProgramRoutineItemInputDto>();
+                var (isValid, validationMessage, plans) = await PrepareRoutinePlansAsync(gymId, routineInputs, cancellationToken);
+                if (!isValid)
+                    return new ResponseModel<ProgramSelectDto>(false, null, validationMessage);
+                routinePlans = plans;
+            }
 
             var entity = new Entities.Program
             {
@@ -83,14 +102,18 @@ namespace Services.Services.CMS.Programs
                 SubmitterUserId = userId,
                 GymId = gymId,
                 CreateDate = DateTime.Now,
-                CountOfPractice = plans.Sum(p => p.Practices.Count)
+                CountOfPractice = dto.Type == ProgramTypes.Paper ? 0 : routinePlans.Sum(p => p.Practices.Count)
             };
 
             await _programRepo.AddAsync(entity, cancellationToken);
 
-            if (plans.Count > 0)
+            if (dto.Type == ProgramTypes.Paper && paperFileIds.Count > 0)
             {
-                var routineEntities = plans.Select(plan => new ProgramRoutineItem
+                await SyncPaperFilesAsync(entity, paperFileIds, cancellationToken);
+            }
+            else if (routinePlans.Count > 0)
+            {
+                var routineEntities = routinePlans.Select(plan => new ProgramRoutineItem
                 {
                     ProgramId = entity.Id,
                     ItemType = plan.ItemType,
@@ -104,9 +127,9 @@ namespace Services.Services.CMS.Programs
                 await _programRoutineItemRepo.AddRangeAsync(routineEntities, cancellationToken);
 
                 var practiceEntities = new List<ProgramPractice>();
-                for (int i = 0; i < plans.Count; i++)
+                for (int i = 0; i < routinePlans.Count; i++)
                 {
-                    var plan = plans[i];
+                    var plan = routinePlans[i];
                     var routineEntity = routineEntities[i];
                     foreach (var practice in plan.Practices)
                     {
@@ -130,6 +153,8 @@ namespace Services.Services.CMS.Programs
                     await _programPracticeRepo.AddRangeAsync(practiceEntities, cancellationToken);
             }
 
+            await SyncOwnerAssignmentAsync(entity.Id, null, entity.OwnerId, cancellationToken);
+
             var model = await _programRepo.TableNoTracking
                 .Where(x => x.Id == entity.Id && x.GymId == gymId)
                 .Include(x => x.Owner)
@@ -150,9 +175,12 @@ namespace Services.Services.CMS.Programs
             var entity = await _programRepo.Table
                 .Include(x => x.ProgramRoutineItems)
                     .ThenInclude(ri => ri.ProgramPractices)
+                .Include(x => x.PaperFiles)
                 .FirstOrDefaultAsync(x => x.Id == id && x.GymId == gymId, cancellationToken);
             if (entity == null)
                 return new ResponseModel(false, "Not found");
+
+            var previousOwnerId = entity.OwnerId;
 
             int? ownerId = dto.OwnerId;
             if (ownerId.HasValue)
@@ -173,70 +201,85 @@ namespace Services.Services.CMS.Programs
             entity.Title = dto.Title;
             entity.Type = dto.Type;
 
-            if (dto.RoutineItems != null)
+            if (dto.Type == ProgramTypes.Paper)
             {
-                var (isValid, validationMessage, plans) = await PrepareRoutinePlansAsync(gymId, dto.RoutineItems, cancellationToken);
-                if (!isValid)
-                    return new ResponseModel(false, validationMessage);
+                var (isPaperValid, paperMessage, fileIds) = await ValidatePaperProgramAsync(gymId, dto, cancellationToken);
+                if (!isPaperValid)
+                    return new ResponseModel(false, paperMessage);
 
-                entity.CountOfPractice = plans.Sum(p => p.Practices.Count);
+                entity.CountOfPractice = 0;
 
-                var existingPractices = entity.ProgramRoutineItems.SelectMany(ri => ri.ProgramPractices).ToList();
-                if (existingPractices.Count > 0)
-                    await _programPracticeRepo.DeleteRangeAsync(existingPractices, cancellationToken);
-
-                var existingRoutineItems = entity.ProgramRoutineItems.ToList();
-                if (existingRoutineItems.Count > 0)
-                    await _programRoutineItemRepo.DeleteRangeAsync(existingRoutineItems, cancellationToken);
-
-                if (plans.Count > 0)
-                {
-                    var routineEntities = plans.Select(plan => new ProgramRoutineItem
-                    {
-                        ProgramId = entity.Id,
-                        ItemType = plan.ItemType,
-                        DisplayOrder = plan.DisplayOrder,
-                        Title = plan.Title,
-                        RepeatCount = plan.RepeatCount,
-                        RestBetweenRepeats = plan.RestBetweenRepeats,
-                        Notes = plan.Notes
-                    }).ToList();
-
-                    await _programRoutineItemRepo.AddRangeAsync(routineEntities, cancellationToken);
-
-                    var practiceEntities = new List<ProgramPractice>();
-                    for (int i = 0; i < plans.Count; i++)
-                    {
-                        var plan = plans[i];
-                        var routineEntity = routineEntities[i];
-                        foreach (var practice in plan.Practices)
-                        {
-                            practiceEntities.Add(new ProgramPractice
-                            {
-                                ProgramId = entity.Id,
-                                ProgramRoutineItemId = routineEntity.Id,
-                                PracticeId = practice.PracticeId,
-                                Type = practice.Type,
-                                SetCount = practice.Type == PracticeType.Set ? practice.SetCount : null,
-                                MovementCount = practice.Type == PracticeType.Set ? practice.MovementCount : null,
-                                Duration = practice.Type == PracticeType.Time ? practice.Duration : null,
-                                Rest = practice.Rest,
-                                InternalOrder = practice.InternalOrder,
-                                Notes = practice.Notes
-                            });
-                        }
-                    }
-
-                    if (practiceEntities.Count > 0)
-                        await _programPracticeRepo.AddRangeAsync(practiceEntities, cancellationToken);
-                }
+                await RemoveRoutineStructureAsync(entity, cancellationToken);
+                await SyncPaperFilesAsync(entity, fileIds, cancellationToken);
             }
             else
             {
-                entity.CountOfPractice = await _programPracticeRepo.TableNoTracking.CountAsync(x => x.ProgramId == entity.Id, cancellationToken);
+                if (entity.PaperFiles != null && entity.PaperFiles.Count > 0)
+                {
+                    await _programPaperFileRepo.DeleteRangeAsync(entity.PaperFiles, cancellationToken);
+                    entity.PaperFiles = new List<ProgramPaperFile>();
+                }
+
+                if (dto.RoutineItems != null)
+                {
+                    var (isValid, validationMessage, plans) = await PrepareRoutinePlansAsync(gymId, dto.RoutineItems, cancellationToken);
+                    if (!isValid)
+                        return new ResponseModel(false, validationMessage);
+
+                    entity.CountOfPractice = plans.Sum(p => p.Practices.Count);
+
+                    await RemoveRoutineStructureAsync(entity, cancellationToken);
+
+                    if (plans.Count > 0)
+                    {
+                        var routineEntities = plans.Select(plan => new ProgramRoutineItem
+                        {
+                            ProgramId = entity.Id,
+                            ItemType = plan.ItemType,
+                            DisplayOrder = plan.DisplayOrder,
+                            Title = plan.Title,
+                            RepeatCount = plan.RepeatCount,
+                            RestBetweenRepeats = plan.RestBetweenRepeats,
+                            Notes = plan.Notes
+                        }).ToList();
+
+                        await _programRoutineItemRepo.AddRangeAsync(routineEntities, cancellationToken);
+
+                        var practiceEntities = new List<ProgramPractice>();
+                        for (int i = 0; i < plans.Count; i++)
+                        {
+                            var plan = plans[i];
+                            var routineEntity = routineEntities[i];
+                            foreach (var practice in plan.Practices)
+                            {
+                                practiceEntities.Add(new ProgramPractice
+                                {
+                                    ProgramId = entity.Id,
+                                    ProgramRoutineItemId = routineEntity.Id,
+                                    PracticeId = practice.PracticeId,
+                                    Type = practice.Type,
+                                    SetCount = practice.Type == PracticeType.Set ? practice.SetCount : null,
+                                    MovementCount = practice.Type == PracticeType.Set ? practice.MovementCount : null,
+                                    Duration = practice.Type == PracticeType.Time ? practice.Duration : null,
+                                    Rest = practice.Rest,
+                                    InternalOrder = practice.InternalOrder,
+                                    Notes = practice.Notes
+                                });
+                            }
+                        }
+
+                        if (practiceEntities.Count > 0)
+                            await _programPracticeRepo.AddRangeAsync(practiceEntities, cancellationToken);
+                    }
+                }
+                else
+                {
+                    entity.CountOfPractice = await _programPracticeRepo.TableNoTracking.CountAsync(x => x.ProgramId == entity.Id, cancellationToken);
+                }
             }
 
             await _programRepo.UpdateAsync(entity, cancellationToken);
+            await SyncOwnerAssignmentAsync(entity.Id, previousOwnerId, entity.OwnerId, cancellationToken);
             return new ResponseModel(true, "");
         }
 
@@ -563,6 +606,135 @@ namespace Services.Services.CMS.Programs
 
             await _userProgramRepo.DeleteAsync(userProgram, cancellationToken);
             return new ResponseModel(true, "");
+        }
+
+        private async Task RemoveRoutineStructureAsync(Entities.Program program, CancellationToken cancellationToken)
+        {
+            if (program.ProgramRoutineItems == null || program.ProgramRoutineItems.Count == 0)
+                return;
+
+            var practices = program.ProgramRoutineItems
+                .SelectMany(ri => ri.ProgramPractices)
+                .ToList();
+
+            if (practices.Count > 0)
+                await _programPracticeRepo.DeleteRangeAsync(practices, cancellationToken);
+
+            var routineItems = program.ProgramRoutineItems.ToList();
+            if (routineItems.Count > 0)
+                await _programRoutineItemRepo.DeleteRangeAsync(routineItems, cancellationToken);
+
+            program.ProgramRoutineItems = new List<ProgramRoutineItem>();
+        }
+
+        private async Task SyncPaperFilesAsync(Entities.Program program, IReadOnlyList<int> orderedFileIds, CancellationToken cancellationToken)
+        {
+            var existing = program.PaperFiles?.ToList() ?? new List<ProgramPaperFile>();
+
+            if (orderedFileIds.Count == 0)
+            {
+                if (existing.Count > 0)
+                    await _programPaperFileRepo.DeleteRangeAsync(existing, cancellationToken);
+                program.PaperFiles = new List<ProgramPaperFile>();
+                return;
+            }
+
+            var toRemove = existing.Where(pf => !orderedFileIds.Contains(pf.GymFileId)).ToList();
+            if (toRemove.Count > 0)
+            {
+                await _programPaperFileRepo.DeleteRangeAsync(toRemove, cancellationToken);
+                existing = existing.Except(toRemove).ToList();
+            }
+
+            var existingLookup = existing.ToDictionary(pf => pf.GymFileId);
+            var toUpdate = new List<ProgramPaperFile>();
+            var toAdd = new List<ProgramPaperFile>();
+
+            for (int index = 0; index < orderedFileIds.Count; index++)
+            {
+                var fileId = orderedFileIds[index];
+                var displayOrder = index + 1;
+                if (existingLookup.TryGetValue(fileId, out var current))
+                {
+                    if (current.DisplayOrder != displayOrder)
+                    {
+                        current.DisplayOrder = displayOrder;
+                        toUpdate.Add(current);
+                    }
+                }
+                else
+                {
+                    toAdd.Add(new ProgramPaperFile
+                    {
+                        ProgramId = program.Id,
+                        GymFileId = fileId,
+                        DisplayOrder = displayOrder
+                    });
+                }
+            }
+
+            if (toUpdate.Count > 0)
+                await _programPaperFileRepo.UpdateRangeAsync(toUpdate, cancellationToken);
+
+            if (toAdd.Count > 0)
+            {
+                await _programPaperFileRepo.AddRangeAsync(toAdd, cancellationToken);
+                existing.AddRange(toAdd);
+            }
+
+            existingLookup = existing.ToDictionary(pf => pf.GymFileId);
+            program.PaperFiles = orderedFileIds.Select(id => existingLookup[id]).ToList();
+        }
+
+        private async Task<(bool isValid, string message, List<int> fileIds)> ValidatePaperProgramAsync(int gymId, ProgramDto dto, CancellationToken cancellationToken)
+        {
+            var requestedIds = (dto.PaperFileIds ?? new List<int>())
+                .Where(id => id > 0)
+                .Distinct()
+                .ToList();
+
+            if (requestedIds.Count == 0)
+                return (false, "انتخاب حداقل یک فایل برای برنامه کاغذی الزامی است.", new List<int>());
+
+            var existingIds = await _gymFileRepo.TableNoTracking
+                .Where(f => f.GymId == gymId && requestedIds.Contains(f.Id))
+                .Select(f => f.Id)
+                .ToListAsync(cancellationToken);
+
+            if (existingIds.Count != requestedIds.Count)
+                return (false, "برخی از فایل‌ها یافت نشد یا به این باشگاه تعلق ندارد.", new List<int>());
+
+            return (true, string.Empty, requestedIds);
+        }
+
+        private async Task SyncOwnerAssignmentAsync(int programId, int? previousOwnerId, int? currentOwnerId, CancellationToken cancellationToken)
+        {
+            if (previousOwnerId.HasValue && (!currentOwnerId.HasValue || previousOwnerId.Value != currentOwnerId.Value))
+            {
+                var existingOld = await _userProgramRepo.Table
+                    .FirstOrDefaultAsync(up => up.ProgramId == programId && up.UserId == previousOwnerId.Value, cancellationToken);
+
+                if (existingOld != null)
+                    await _userProgramRepo.DeleteAsync(existingOld, cancellationToken);
+            }
+
+            if (currentOwnerId.HasValue)
+            {
+                var exists = await _userProgramRepo.TableNoTracking
+                    .AnyAsync(up => up.ProgramId == programId && up.UserId == currentOwnerId.Value, cancellationToken);
+                if (!exists)
+                {
+                    var userProgram = new UserProgram
+                    {
+                        ProgramId = programId,
+                        UserId = currentOwnerId.Value,
+                        StartDate = DateTime.Now,
+                        EndDate = null
+                    };
+
+                    await _userProgramRepo.AddAsync(userProgram, cancellationToken);
+                }
+            }
         }
 
         private async Task<(bool Success, string Error, List<RoutineItemPlan> Plans)> PrepareRoutinePlansAsync(

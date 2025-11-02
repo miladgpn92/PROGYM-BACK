@@ -26,6 +26,7 @@ namespace Entities
         public virtual ICollection<ProgramRoutineItem> ProgramRoutineItems { get; set; }
         public virtual ICollection<UserProgram> UserPrograms { get; set; }
         public virtual ICollection<Exercise> Exercises { get; set; }
+        public virtual ICollection<ProgramPaperFile> PaperFiles { get; set; } = new List<ProgramPaperFile>();
     }
 
     public class ProgramConfiguration : IEntityTypeConfiguration<Program>
@@ -59,6 +60,10 @@ namespace Entities
             builder.HasIndex(x => x.OwnerId);
             builder.HasIndex(x => x.SubmitterUserId);
             builder.Property(x => x.CreateDate);
+            builder.HasMany(x => x.PaperFiles)
+                   .WithOne(pf => pf.Program)
+                   .HasForeignKey(pf => pf.ProgramId)
+                   .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

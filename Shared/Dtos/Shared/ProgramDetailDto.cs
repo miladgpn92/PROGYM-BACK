@@ -1,6 +1,8 @@
+using AutoMapper;
 using Common.Enums;
 using Entities;
 using SharedModels.Api;
+using SharedModels.CustomMapping;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -52,6 +54,8 @@ namespace SharedModels.Dtos.Shared
         public string OwnerFamily { get; set; }
         public string SubmitterName { get; set; }
         public string SubmitterFamily { get; set; }
+        public List<int> PaperFileIds { get; set; } = new List<int>();
+        public List<ProgramPaperFileInfoDto> PaperFiles { get; set; } = new List<ProgramPaperFileInfoDto>();
         public List<ProgramRoutineItemSelectDto> RoutineItems { get; set; } = new List<ProgramRoutineItemSelectDto>();
 
         public override void CustomMappings(AutoMapper.IMappingExpression<Program, ProgramDetailDto> mapping)
@@ -61,6 +65,25 @@ namespace SharedModels.Dtos.Shared
             mapping.ForMember(d => d.SubmitterName, opt => opt.MapFrom(s => s.SubmitterUser.Name));
             mapping.ForMember(d => d.SubmitterFamily, opt => opt.MapFrom(s => s.SubmitterUser.Family));
             mapping.ForMember(d => d.RoutineItems, opt => opt.MapFrom(s => s.ProgramRoutineItems.OrderBy(ri => ri.DisplayOrder)));
+            mapping.ForMember(d => d.PaperFileIds, opt => opt.MapFrom(s => s.PaperFiles
+                .OrderBy(pf => pf.DisplayOrder)
+                .Select(pf => pf.GymFileId)));
+            mapping.ForMember(d => d.PaperFiles, opt => opt.MapFrom(s => s.PaperFiles.OrderBy(pf => pf.DisplayOrder)));
+        }
+    }
+
+    public class ProgramPaperFileInfoDto : IHaveCustomMapping
+    {
+        public int GymFileId { get; set; }
+        public string RelativePath { get; set; }
+        public string MediaType { get; set; }
+
+        public void CreateMappings(Profile profile)
+        {
+            profile.CreateMap<ProgramPaperFile, ProgramPaperFileInfoDto>()
+                .ForMember(d => d.GymFileId, opt => opt.MapFrom(s => s.GymFileId))
+                .ForMember(d => d.RelativePath, opt => opt.MapFrom(s => s.GymFile.RelativePath))
+                .ForMember(d => d.MediaType, opt => opt.MapFrom(s => s.GymFile.ContentType));
         }
     }
 }

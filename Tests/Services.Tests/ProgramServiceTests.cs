@@ -1,10 +1,15 @@
 using AutoMapper;
+using Common;
 using Common.Enums;
 using Data;
 using Data.Repositories;
 using Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
+using Services.Services;
 using Services.Services.CMS.Programs;
 using SharedModels.CustomMapping;
 using SharedModels.Dtos.Shared;
@@ -20,11 +25,14 @@ namespace Services.Tests
     public class ProgramServiceTests
     {
         private const int GymId = 1;
-        private const int ManagerUserId = 10;
+        private const int ManagerUserId = 1;
+        private const int SecondaryManagerUserId = 2;
         private const int PracticeCategoryId = 100;
         private const int PracticeAId = 1000;
         private const int PracticeBId = 1001;
         private const int PracticeCId = 1002;
+        private const int PaperFileId1 = 2000;
+        private const int PaperFileId2 = 2001;
 
         private readonly IMapper _mapper;
 
@@ -50,7 +58,7 @@ namespace Services.Tests
 
             var response = await service.CreateAsync(GymId, ManagerUserId, dto, CancellationToken.None);
 
-            Assert.True(response.IsSuccess);
+            Assert.True(response.IsSuccess, response.Message);
             var program = await context.Set<Entities.Program>()
                 .Include(p => p.ProgramRoutineItems)
                     .ThenInclude(ri => ri.ProgramPractices)
@@ -67,6 +75,115 @@ namespace Services.Tests
             var single = program.ProgramRoutineItems.Single(ri => ri.ItemType == ProgramRoutineItemType.Single);
             Assert.Single(single.ProgramPractices);
             Assert.Equal(2, single.DisplayOrder);
+        }
+
+        [Fact]
+        public async Task CreateAsync_CreatesPaperProgramWithFiles()
+        {
+            using var context = CreateContext(nameof(CreateAsync_CreatesPaperProgramWithFiles));
+            await SeedReferenceDataAsync(context);
+            var service = CreateService(context);
+
+            var dto = new ProgramDto
+            {
+                Title = "Paper Program",
+                Type = ProgramTypes.Paper,
+                PaperFileIds = new List<int> { PaperFileId1, PaperFileId2 }
+            };
+
+            var response = await service.CreateAsync(GymId, ManagerUserId, dto, CancellationToken.None);
+
+            Assert.True(response.IsSuccess, response.Message);
+            var program = await context.Set<Entities.Program>()
+                .Include(p => p.PaperFiles)
+                .SingleAsync();
+
+            Assert.Equal(ProgramTypes.Paper, program.Type);
+            Assert.Equal(0, program.CountOfPractice);
+            Assert.Equal(new[] { PaperFileId1, PaperFileId2 }, program.PaperFiles
+                .OrderBy(pf => pf.DisplayOrder)
+                .Select(pf => pf.GymFileId)
+                .ToArray());
+        }
+
+        [Fact]
+        public async Task CreateAsync_AttachesOwnerAsUserProgram()
+        {
+            using var context = CreateContext(nameof(CreateAsync_AttachesOwnerAsUserProgram));
+            await SeedReferenceDataAsync(context);
+            var service = CreateService(context);
+
+            var dto = BuildDefaultProgramDto();
+            dto.OwnerId = ManagerUserId;
+
+            var response = await service.CreateAsync(GymId, ManagerUserId, dto, CancellationToken.None);
+
+            Assert.True(response.IsSuccess, response.Message);
+            Assert.NotNull(response.Model);
+
+            var programId = response.Model.Id;
+            var ownerLink = await context.Set<UserProgram>()
+                .SingleOrDefaultAsync(up => up.ProgramId == programId && up.UserId == ManagerUserId);
+
+            Assert.NotNull(ownerLink);
+            Assert.True(ownerLink!.StartDate > DateTime.MinValue);
+            Assert.Null(ownerLink.EndDate);
+        }
+
+        [Fact]
+        public async Task UpdateAsync_SyncsOwnerUserProgram()
+        {
+            using var context = CreateContext(nameof(UpdateAsync_SyncsOwnerUserProgram));
+            await SeedReferenceDataAsync(context);
+            var service = CreateService(context);
+
+            var createDto = BuildDefaultProgramDto();
+            createDto.OwnerId = ManagerUserId;
+            var createResponse = await service.CreateAsync(GymId, ManagerUserId, createDto, CancellationToken.None);
+            Assert.True(createResponse.IsSuccess, createResponse.Message);
+
+            var programId = createResponse.Model.Id;
+
+            var updateDto = BuildDefaultProgramDto();
+            updateDto.OwnerId = SecondaryManagerUserId;
+
+            var updateResponse = await service.UpdateAsync(GymId, ManagerUserId, programId, updateDto, CancellationToken.None);
+            Assert.True(updateResponse.IsSuccess, updateResponse.Description);
+
+            var oldOwnerLink = await context.Set<UserProgram>()
+                .FirstOrDefaultAsync(up => up.ProgramId == programId && up.UserId == ManagerUserId);
+            Assert.Null(oldOwnerLink);
+
+            var newOwnerLink = await context.Set<UserProgram>()
+                .SingleOrDefaultAsync(up => up.ProgramId == programId && up.UserId == SecondaryManagerUserId);
+            Assert.NotNull(newOwnerLink);
+        }
+
+        [Fact]
+        public async Task GetByIdAsync_ReturnsPaperFileMetadata()
+        {
+            using var context = CreateContext(nameof(GetByIdAsync_ReturnsPaperFileMetadata));
+            await SeedReferenceDataAsync(context);
+            var service = CreateService(context);
+
+            var dto = new ProgramDto
+            {
+                Title = "Paper Program",
+                Type = ProgramTypes.Paper,
+                PaperFileIds = new List<int> { PaperFileId1, PaperFileId2 }
+            };
+
+            var createResponse = await service.CreateAsync(GymId, ManagerUserId, dto, CancellationToken.None);
+            Assert.True(createResponse.IsSuccess, createResponse.Message);
+            var programId = createResponse.Model.Id;
+
+            var detailResponse = await service.GetByIdAsync(GymId, ManagerUserId, programId, CancellationToken.None);
+            Assert.True(detailResponse.IsSuccess);
+            var model = detailResponse.Model;
+            Assert.NotNull(model);
+            Assert.Equal(2, model.PaperFiles.Count);
+            Assert.Equal(@"paper\plan1.pdf", model.PaperFiles[0].RelativePath);
+            Assert.Equal("application/pdf", model.PaperFiles[0].MediaType);
         }
 
         [Fact]
@@ -154,7 +271,7 @@ namespace Services.Tests
 
             var dto = BuildDefaultProgramDto();
             var createResponse = await service.CreateAsync(GymId, ManagerUserId, dto, CancellationToken.None);
-            Assert.True(createResponse.IsSuccess);
+            Assert.True(createResponse.IsSuccess, createResponse.Message);
 
             var program = await context.Set<Entities.Program>()
                 .Include(p => p.ProgramRoutineItems)
@@ -181,7 +298,7 @@ namespace Services.Tests
 
             var response = await service.ReorderRoutineItemsAsync(GymId, ManagerUserId, program.Id, reordered, CancellationToken.None);
 
-            Assert.True(response.IsSuccess);
+            Assert.True(response.IsSuccess, response.Description);
             var refreshedProgram = await context.Set<Entities.Program>()
                 .Include(p => p.ProgramRoutineItems)
                 .SingleAsync();
@@ -202,7 +319,7 @@ namespace Services.Tests
 
             var dto = BuildDefaultProgramDto();
             var createResponse = await service.CreateAsync(GymId, ManagerUserId, dto, CancellationToken.None);
-            Assert.True(createResponse.IsSuccess);
+            Assert.True(createResponse.IsSuccess, createResponse.Message);
 
             var superset = await context.Set<ProgramRoutineItem>()
                 .Include(ri => ri.ProgramPractices)
@@ -230,7 +347,7 @@ namespace Services.Tests
 
             var response = await service.ReorderSupersetPracticesAsync(GymId, ManagerUserId, reorderDto, CancellationToken.None);
 
-            Assert.True(response.IsSuccess);
+            Assert.True(response.IsSuccess, response.Description);
             var refreshedSuperset = await context.Set<ProgramRoutineItem>()
                 .Include(ri => ri.ProgramPractices)
                 .Where(ri => ri.Id == superset.Id)
@@ -252,7 +369,7 @@ namespace Services.Tests
 
             var dto = BuildDefaultProgramDto();
             var createResponse = await service.CreateAsync(GymId, ManagerUserId, dto, CancellationToken.None);
-            Assert.True(createResponse.IsSuccess);
+            Assert.True(createResponse.IsSuccess, createResponse.Message);
 
             var superset = await context.Set<ProgramRoutineItem>()
                 .Where(ri => ri.ItemType == ProgramRoutineItemType.Superset)
@@ -269,7 +386,7 @@ namespace Services.Tests
 
             var response = await service.UpdateRoutineItemMetadataAsync(GymId, ManagerUserId, metadataDto, CancellationToken.None);
 
-            Assert.True(response.IsSuccess);
+            Assert.True(response.IsSuccess, response.Description);
             var refreshedSuperset = await context.Set<ProgramRoutineItem>().FindAsync(superset.Id);
             Assert.NotNull(refreshedSuperset);
             Assert.Equal("Updated Title", refreshedSuperset!.Title);
@@ -338,10 +455,15 @@ namespace Services.Tests
                 new Repository<Entities.Program>(context),
                 new Repository<ProgramRoutineItem>(context),
                 new Repository<ProgramPractice>(context),
+                new Repository<ProgramPaperFile>(context),
+                new Repository<GymFile>(context),
                 new Repository<GymUser>(context),
                 new Repository<Practice>(context),
                 new Repository<UserProgram>(context),
-                _mapper);
+                _mapper,
+                new FakeSmsService(),
+                new TestOptionsSnapshot(new ProjectSettings()),
+                new TestHostEnvironment());
         }
 
         private ApplicationDbContext CreateContext(string databaseName)
@@ -371,6 +493,20 @@ namespace Services.Tests
                 EmailConfirmed = true
             };
 
+            var secondaryManager = new ApplicationUser
+            {
+                Id = SecondaryManagerUserId,
+                UserName = "manager2",
+                NormalizedUserName = "MANAGER2",
+                Email = "manager2@example.com",
+                NormalizedEmail = "MANAGER2@EXAMPLE.COM",
+                SecurityStamp = Guid.NewGuid().ToString(),
+                ConcurrencyStamp = Guid.NewGuid().ToString(),
+                PhoneNumber = "00000000001",
+                PhoneNumberConfirmed = true,
+                EmailConfirmed = true
+            };
+
             var gym = new Gym
             {
                 Id = GymId,
@@ -390,6 +526,14 @@ namespace Services.Tests
                 JoinDate = DateTime.UtcNow
             };
 
+            var secondaryGymUser = new GymUser
+            {
+                GymId = GymId,
+                UserId = SecondaryManagerUserId,
+                Role = UsersRole.manager,
+                JoinDate = DateTime.UtcNow
+            };
+
             var category = new PracticeCategory
             {
                 Id = PracticeCategoryId,
@@ -405,6 +549,7 @@ namespace Services.Tests
                     Name = "Barbell Row",
                     EnTitle = "Barbell Row",
                     PracticeCategoryId = PracticeCategoryId,
+                    GymId = GymId,
                     UserId = ManagerUserId,
                     CreateDate = DateTime.UtcNow
                 },
@@ -414,6 +559,7 @@ namespace Services.Tests
                     Name = "Assault Bike",
                     EnTitle = "Assault Bike",
                     PracticeCategoryId = PracticeCategoryId,
+                    GymId = GymId,
                     UserId = ManagerUserId,
                     CreateDate = DateTime.UtcNow
                 },
@@ -423,18 +569,90 @@ namespace Services.Tests
                     Name = "Back Squat",
                     EnTitle = "Back Squat",
                     PracticeCategoryId = PracticeCategoryId,
+                    GymId = GymId,
                     UserId = ManagerUserId,
                     CreateDate = DateTime.UtcNow
                 }
             };
 
             context.Users.Add(manager);
+            context.Users.Add(secondaryManager);
             context.Set<Gym>().Add(gym);
             context.Set<GymUser>().Add(gymUser);
+            context.Set<GymUser>().Add(secondaryGymUser);
             context.Set<PracticeCategory>().Add(category);
             context.Set<Practice>().AddRange(practices);
+            var gymFiles = new List<GymFile>
+            {
+                new GymFile
+                {
+                    Id = PaperFileId1,
+                    GymId = GymId,
+                    OriginalFileName = "plan1.pdf",
+                    StoredFileName = $"plan1_{Guid.NewGuid():N}.pdf",
+                    RelativePath = @"paper\plan1.pdf",
+                    ContentType = "application/pdf",
+                    SizeBytes = 2048,
+                    IsImage = false,
+                    UploadedByUserId = ManagerUserId,
+                    UploadedAt = DateTime.UtcNow,
+                    CreatorUserId = ManagerUserId,
+                    CreatorIP = "127.0.0.1",
+                    CreateDate = DateTime.UtcNow
+                },
+                new GymFile
+                {
+                    Id = PaperFileId2,
+                    GymId = GymId,
+                    OriginalFileName = "plan2.pdf",
+                    StoredFileName = $"plan2_{Guid.NewGuid():N}.pdf",
+                    RelativePath = @"paper\plan2.pdf",
+                    ContentType = "application/pdf",
+                    SizeBytes = 4096,
+                    IsImage = false,
+                    UploadedByUserId = ManagerUserId,
+                    UploadedAt = DateTime.UtcNow,
+                    CreatorUserId = ManagerUserId,
+                    CreatorIP = "127.0.0.1",
+                    CreateDate = DateTime.UtcNow
+                }
+            };
+
+            context.Set<GymFile>().AddRange(gymFiles);
 
             await context.SaveChangesAsync();
+        }
+
+        private class FakeSmsService : ISMSService
+        {
+            public Task<ResponseModel> SendSMSAsync(string UserToken, string Url, string to, string text)
+                => Task.FromResult(new ResponseModel(true));
+
+            public Task<ResponseModel<string>> IncreseCharge(string Url, int Amount)
+                => Task.FromResult(new ResponseModel<string>(true, string.Empty));
+
+            public Task<ResponseModel> ValidatePayment(string Url, int Amount, int id)
+                => Task.FromResult(new ResponseModel(true));
+        }
+
+        private class TestOptionsSnapshot : IOptionsSnapshot<ProjectSettings>
+        {
+            public TestOptionsSnapshot(ProjectSettings value)
+            {
+                Value = value ?? new ProjectSettings();
+            }
+
+            public ProjectSettings Value { get; }
+
+            public ProjectSettings Get(string name) => Value;
+        }
+
+        private class TestHostEnvironment : IHostEnvironment
+        {
+            public string EnvironmentName { get; set; } = Environments.Development;
+            public string ApplicationName { get; set; } = "TestHost";
+            public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
+            public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
         }
     }
 }
