@@ -153,7 +153,13 @@ namespace Services.Services.CMS.Programs
                     await _programPracticeRepo.AddRangeAsync(practiceEntities, cancellationToken);
             }
 
-            await SyncOwnerAssignmentAsync(entity.Id, null, entity.OwnerId, cancellationToken);
+            await SyncOwnerAssignmentAsync(
+                entity.Id,
+                null,
+                entity.OwnerId,
+                dto.OwnerStartDate,
+                dto.OwnerEndDate,
+                cancellationToken);
 
             var model = await _programRepo.TableNoTracking
                 .Where(x => x.Id == entity.Id && x.GymId == gymId)
@@ -279,7 +285,13 @@ namespace Services.Services.CMS.Programs
             }
 
             await _programRepo.UpdateAsync(entity, cancellationToken);
-            await SyncOwnerAssignmentAsync(entity.Id, previousOwnerId, entity.OwnerId, cancellationToken);
+            await SyncOwnerAssignmentAsync(
+                entity.Id,
+                previousOwnerId,
+                entity.OwnerId,
+                dto.OwnerStartDate,
+                dto.OwnerEndDate,
+                cancellationToken);
             return new ResponseModel(true, "");
         }
 
@@ -707,7 +719,13 @@ namespace Services.Services.CMS.Programs
             return (true, string.Empty, requestedIds);
         }
 
-        private async Task SyncOwnerAssignmentAsync(int programId, int? previousOwnerId, int? currentOwnerId, CancellationToken cancellationToken)
+        private async Task SyncOwnerAssignmentAsync(
+            int programId,
+            int? previousOwnerId,
+            int? currentOwnerId,
+            DateTime? requestedStart,
+            DateTime? requestedEnd,
+            CancellationToken cancellationToken)
         {
             if (previousOwnerId.HasValue && (!currentOwnerId.HasValue || previousOwnerId.Value != currentOwnerId.Value))
             {
@@ -720,19 +738,28 @@ namespace Services.Services.CMS.Programs
 
             if (currentOwnerId.HasValue)
             {
-                var exists = await _userProgramRepo.TableNoTracking
-                    .AnyAsync(up => up.ProgramId == programId && up.UserId == currentOwnerId.Value, cancellationToken);
-                if (!exists)
+                var current = await _userProgramRepo.Table
+                    .FirstOrDefaultAsync(up => up.ProgramId == programId && up.UserId == currentOwnerId.Value, cancellationToken);
+
+                if (current == null)
                 {
                     var userProgram = new UserProgram
                     {
                         ProgramId = programId,
                         UserId = currentOwnerId.Value,
-                        StartDate = DateTime.Now,
-                        EndDate = null
+                        StartDate = requestedStart?.Date ?? DateTime.Now,
+                        EndDate = requestedEnd?.Date
                     };
 
                     await _userProgramRepo.AddAsync(userProgram, cancellationToken);
+                }
+                else if (requestedStart.HasValue || requestedEnd.HasValue)
+                {
+                    if (requestedStart.HasValue)
+                        current.StartDate = requestedStart.Value.Date;
+
+                    current.EndDate = requestedEnd?.Date;
+                    await _userProgramRepo.UpdateAsync(current, cancellationToken);
                 }
             }
         }

@@ -24,6 +24,8 @@ namespace SharedModels.Dtos.Shared
         [Display(Name = "Owner")]
         public int? OwnerId { get; set; }
 
+        public DateTime? OwnerStartDate { get; set; }
+        public DateTime? OwnerEndDate { get; set; }
         public List<int> PaperFileIds { get; set; } = new();
         // SubmitterUserId is taken from authenticated user; do not accept from client
 

@@ -115,6 +115,8 @@ namespace Services.Tests
 
             var dto = BuildDefaultProgramDto();
             dto.OwnerId = ManagerUserId;
+            dto.OwnerStartDate = DateTime.Today.AddDays(-5);
+            dto.OwnerEndDate = DateTime.Today.AddDays(10);
 
             var response = await service.CreateAsync(GymId, ManagerUserId, dto, CancellationToken.None);
 
@@ -126,8 +128,8 @@ namespace Services.Tests
                 .SingleOrDefaultAsync(up => up.ProgramId == programId && up.UserId == ManagerUserId);
 
             Assert.NotNull(ownerLink);
-            Assert.True(ownerLink!.StartDate > DateTime.MinValue);
-            Assert.Null(ownerLink.EndDate);
+            Assert.Equal(dto.OwnerStartDate.Value.Date, ownerLink!.StartDate);
+            Assert.Equal(dto.OwnerEndDate?.Date, ownerLink.EndDate);
         }
 
         [Fact]
@@ -146,6 +148,8 @@ namespace Services.Tests
 
             var updateDto = BuildDefaultProgramDto();
             updateDto.OwnerId = SecondaryManagerUserId;
+            updateDto.OwnerStartDate = DateTime.Today.AddDays(-1);
+            updateDto.OwnerEndDate = DateTime.Today.AddDays(3);
 
             var updateResponse = await service.UpdateAsync(GymId, ManagerUserId, programId, updateDto, CancellationToken.None);
             Assert.True(updateResponse.IsSuccess, updateResponse.Description);
@@ -157,6 +161,8 @@ namespace Services.Tests
             var newOwnerLink = await context.Set<UserProgram>()
                 .SingleOrDefaultAsync(up => up.ProgramId == programId && up.UserId == SecondaryManagerUserId);
             Assert.NotNull(newOwnerLink);
+            Assert.Equal(updateDto.OwnerStartDate!.Value.Date, newOwnerLink!.StartDate);
+            Assert.Equal(updateDto.OwnerEndDate?.Date, newOwnerLink.EndDate);
         }
 
         [Fact]
