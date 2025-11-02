@@ -1,5 +1,6 @@
-using Common.Consts;
 using Common;
+using Common.Consts;
+using Common.Enums;
 using DariaCMS.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -39,13 +40,15 @@ namespace Web.Api.Programs
         public async Task<IActionResult> List(
             [FromQuery] int gymId,
             [FromQuery] string? q,
+            [FromQuery] ProgramTypes? type,
+            [FromQuery] bool includeAll = false,
             [FromQuery] int pageNumber = 1,
             [FromQuery] int pageSize = 10,
             CancellationToken cancellationToken = default)
         {
             var userId = User.Identity.GetUserIdInt();
             var pager = new Pageres { PageNumber = pageNumber, PageSize = pageSize };
-            var res = await _service.GetListAsync(gymId, userId, q ?? string.Empty, pager, cancellationToken);
+            var res = await _service.GetListAsync(gymId, userId, q ?? string.Empty, type, includeAll, pager, cancellationToken);
             if (res.IsSuccess)
                 return Ok(res.Model);
             else

@@ -463,7 +463,7 @@ namespace Services.Services.CMS.Programs
             return new ResponseModel(true, "");
         }
 
-        public async Task<ResponseModel<PagedResult<ProgramSelectDto>>> GetListAsync(int gymId, int userId, string q, Pageres pager, CancellationToken cancellationToken)
+        public async Task<ResponseModel<PagedResult<ProgramSelectDto>>> GetListAsync(int gymId, int userId, string q, ProgramTypes? type, bool includeAll, Pageres pager, CancellationToken cancellationToken)
         {
             pager ??= new Pageres();
             pager.Normalize();
@@ -475,6 +475,13 @@ namespace Services.Services.CMS.Programs
 
             var query = _programRepo.TableNoTracking
                 .Where(x => x.GymId == gymId);
+
+            if (!includeAll)
+            {
+                var effectiveType = type ?? ProgramTypes.Global;
+                query = query.Where(x => x.Type == effectiveType);
+            }
+
             if (!string.IsNullOrWhiteSpace(q))
                 query = query.Where(x => x.Title.Contains(q));
 
