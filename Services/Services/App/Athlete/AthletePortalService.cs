@@ -103,6 +103,7 @@ namespace Services.Services.App.Athlete
                     UserProgramId = up.Id,
                     ProgramId = up.ProgramId,
                     ProgramTitle = up.Program.Title,
+                    ProgramType = up.Program.Type,
                     StartDate = up.StartDate,
                     EndDate = up.EndDate,
                     IsActive = !up.EndDate.HasValue || up.EndDate.Value.Date >= today

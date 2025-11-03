@@ -304,7 +304,8 @@ namespace Services.Services.CMS.Athletes
                         ProgramId = up.ProgramId,
                         StartDate = up.StartDate,
                         EndDate = up.EndDate,
-                        ProgramTitle = up.Program.Title
+                        ProgramTitle = up.Program.Title,
+                        ProgramType = up.Program.Type
                     }).ToListAsync(cancellationToken)
             };
 
