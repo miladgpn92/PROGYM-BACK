@@ -155,7 +155,7 @@ namespace Services.Services.CMS.Practices
             return new ResponseModel(true, "");
         }
 
-        public async Task<ResponseModel<PagedResult<PracticeSelectDto>>> GetListAsync(int gymId, int userId, string q, Pageres pager, CancellationToken cancellationToken)
+        public async Task<ResponseModel<PagedResult<PracticeSelectDto>>> GetListAsync(int gymId, int userId, string q, IEnumerable<int>? categoryIds, Pageres pager, CancellationToken cancellationToken)
         {
             pager ??= new Pageres();
             pager.Normalize();
@@ -167,6 +167,17 @@ namespace Services.Services.CMS.Practices
 
             var query = _practiceRepo.TableNoTracking
                 .Where(x => x.GymId == gymId);
+
+            var normalizedCategoryIds = categoryIds?
+                .Where(id => id > 0)
+                .Distinct()
+                .ToList();
+
+            if (normalizedCategoryIds != null && normalizedCategoryIds.Count > 0)
+            {
+                query = query.Where(x => normalizedCategoryIds.Contains(x.PracticeCategoryId));
+            }
+
             if (!string.IsNullOrWhiteSpace(q))
                 query = query.Where(x =>
                     x.Name.Contains(q) ||
