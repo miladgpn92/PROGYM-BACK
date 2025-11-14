@@ -530,6 +530,7 @@ namespace Services.Services.CMS.Programs
             if (item == null)
                 return new ResponseModel<ProgramDetailDto>(false, null, "Not found");
 
+            await PopulatePracticeDescriptionsAsync(item, cancellationToken);
             return new ResponseModel<ProgramDetailDto>(true, item);
         }
 
@@ -639,13 +640,47 @@ namespace Services.Services.CMS.Programs
                 .ToList();
 
             if (practices.Count > 0)
-                await _programPracticeRepo.DeleteRangeAsync(practices, cancellationToken);
+            await _programPracticeRepo.DeleteRangeAsync(practices, cancellationToken);
 
             var routineItems = program.ProgramRoutineItems.ToList();
             if (routineItems.Count > 0)
                 await _programRoutineItemRepo.DeleteRangeAsync(routineItems, cancellationToken);
 
             program.ProgramRoutineItems = new List<ProgramRoutineItem>();
+        }
+
+        private async Task PopulatePracticeDescriptionsAsync(ProgramDetailDto dto, CancellationToken cancellationToken)
+        {
+            if (dto?.RoutineItems == null || dto.RoutineItems.Count == 0)
+                return;
+
+            var practices = dto.RoutineItems
+                .Where(ri => ri?.Practices != null)
+                .SelectMany(ri => ri.Practices)
+                .Where(p => p?.PracticeId.HasValue == true)
+                .ToList();
+
+            if (practices.Count == 0)
+                return;
+
+            var practiceIds = practices
+                .Select(p => p.PracticeId!.Value)
+                .Distinct()
+                .ToList();
+
+            var descLookup = await _practiceRepo.TableNoTracking
+                .Where(pr => practiceIds.Contains(pr.Id))
+                .Select(pr => new { pr.Id, pr.Desc })
+                .ToDictionaryAsync(pr => pr.Id, pr => pr.Desc, cancellationToken);
+
+            foreach (var practice in practices)
+            {
+                if (practice?.PracticeId == null)
+                    continue;
+
+                if (descLookup.TryGetValue(practice.PracticeId.Value, out var desc))
+                    practice.PracticeDesc = desc;
+            }
         }
 
         private async Task SyncPaperFilesAsync(Entities.Program program, IReadOnlyList<int> orderedFileIds, CancellationToken cancellationToken)

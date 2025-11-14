@@ -27,6 +27,7 @@ namespace Services.Services.App.Athlete
         private readonly IRepository<Exercise> _exerciseRepo;
         private readonly IRepository<GymUser> _gymUserRepo;
         private readonly IRepository<Entities.Gym> _gymRepo;
+        private readonly IRepository<Entities.Practice> _practiceRepo;
         private readonly IMapper _mapper;
 
         public AthletePortalService(
@@ -37,6 +38,7 @@ namespace Services.Services.App.Athlete
             IRepository<Exercise> exerciseRepo,
             IRepository<GymUser> gymUserRepo,
             IRepository<Entities.Gym> gymRepo,
+            IRepository<Entities.Practice> practiceRepo,
             IMapper mapper)
         {
             _userManager = userManager;
@@ -46,6 +48,7 @@ namespace Services.Services.App.Athlete
             _exerciseRepo = exerciseRepo;
             _gymUserRepo = gymUserRepo;
             _gymRepo = gymRepo;
+            _practiceRepo = practiceRepo;
             _mapper = mapper;
         }
 
@@ -147,6 +150,7 @@ namespace Services.Services.App.Athlete
             if (model == null)
                 return new ResponseModel<ProgramDetailDto>(false, null, "Program not found");
 
+            await PopulatePracticeDescriptionsAsync(model, cancellationToken);
             return new ResponseModel<ProgramDetailDto>(true, model);
         }
 
@@ -259,6 +263,40 @@ namespace Services.Services.App.Athlete
                 age--;
 
             return age < 0 ? 0 : age;
+        }
+
+        private async Task PopulatePracticeDescriptionsAsync(ProgramDetailDto dto, CancellationToken cancellationToken)
+        {
+            if (dto?.RoutineItems == null || dto.RoutineItems.Count == 0)
+                return;
+
+            var practices = dto.RoutineItems
+                .Where(ri => ri?.Practices != null)
+                .SelectMany(ri => ri.Practices)
+                .Where(p => p?.PracticeId.HasValue == true)
+                .ToList();
+
+            if (practices.Count == 0)
+                return;
+
+            var practiceIds = practices
+                .Select(p => p.PracticeId!.Value)
+                .Distinct()
+                .ToList();
+
+            var descLookup = await _practiceRepo.TableNoTracking
+                .Where(pr => practiceIds.Contains(pr.Id))
+                .Select(pr => new { pr.Id, pr.Desc })
+                .ToDictionaryAsync(pr => pr.Id, pr => pr.Desc, cancellationToken);
+
+            foreach (var practice in practices)
+            {
+                if (practice?.PracticeId == null)
+                    continue;
+
+                if (descLookup.TryGetValue(practice.PracticeId.Value, out var desc))
+                    practice.PracticeDesc = desc;
+            }
         }
     }
 }

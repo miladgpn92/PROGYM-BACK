@@ -22,6 +22,7 @@ namespace SharedModels.Dtos.Shared
         public string Notes { get; set; }
         public string PracticeName { get; set; }
         public string PracticeEnTitle { get; set; }
+        public string PracticeDesc { get; set; }
         public IList<PracticeMediaSelectDto> Images { get; set; } = new List<PracticeMediaSelectDto>();
         public IList<PracticeMediaSelectDto> Videos { get; set; } = new List<PracticeMediaSelectDto>();
 
@@ -32,6 +33,7 @@ namespace SharedModels.Dtos.Shared
             mapping.ForMember(d => d.Notes, opt => opt.MapFrom(s => s.Notes));
             mapping.ForMember(d => d.PracticeName, opt => opt.MapFrom(s => s.Practice.Name));
             mapping.ForMember(d => d.PracticeEnTitle, opt => opt.MapFrom(s => s.Practice.EnTitle));
+            mapping.ForMember(d => d.PracticeDesc, opt => opt.MapFrom(s => s.Practice.Desc));
             mapping.ForMember(d => d.Images, opt => opt.MapFrom(s => s.Practice.MediaItems
                 .Where(m => m.MediaType == MediaFileType.Image)
                 .OrderBy(m => m.DisplayOrder)));
