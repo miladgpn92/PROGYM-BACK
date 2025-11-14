@@ -33,6 +33,7 @@ namespace Services.Tests
         private const int PracticeCId = 1002;
         private const int PaperFileId1 = 2000;
         private const int PaperFileId2 = 2001;
+        private const string DefaultNote = "نکات تمرین";
 
         private readonly IMapper _mapper;
 
@@ -66,6 +67,7 @@ namespace Services.Tests
 
             Assert.Equal(2, program.ProgramRoutineItems.Count);
             Assert.Equal(3, program.CountOfPractice);
+            Assert.Equal(DefaultNote, program.Note);
 
             var superset = program.ProgramRoutineItems.Single(ri => ri.ItemType == ProgramRoutineItemType.Superset);
             Assert.Equal("Upper Body Blast", superset.Title);
@@ -150,9 +152,13 @@ namespace Services.Tests
             updateDto.OwnerId = SecondaryManagerUserId;
             updateDto.OwnerStartDate = DateTime.Today.AddDays(-1);
             updateDto.OwnerEndDate = DateTime.Today.AddDays(3);
+            const string updatedNoteRaw = "  تمرین جدید  ";
+            updateDto.Note = updatedNoteRaw;
 
             var updateResponse = await service.UpdateAsync(GymId, ManagerUserId, programId, updateDto, CancellationToken.None);
             Assert.True(updateResponse.IsSuccess, updateResponse.Description);
+            var updatedProgram = await context.Set<Entities.Program>().SingleAsync(p => p.Id == programId);
+            Assert.Equal(updatedNoteRaw.Trim(), updatedProgram.Note);
 
             var oldOwnerLink = await context.Set<UserProgram>()
                 .FirstOrDefaultAsync(up => up.ProgramId == programId && up.UserId == ManagerUserId);
@@ -406,6 +412,7 @@ namespace Services.Tests
             return new ProgramDto
             {
                 Title = "Hybrid Program",
+                Note = $"  {DefaultNote}  ",
                 Type = ProgramTypes.Private,
                 RoutineItems = new List<ProgramRoutineItemInputDto>
                 {

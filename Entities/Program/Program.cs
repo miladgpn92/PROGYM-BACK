@@ -13,6 +13,7 @@ namespace Entities
         public int CountOfPractice { get; set; }
         public ProgramTypes Type { get; set; }
         public int GymId { get; set; }
+        public string Note { get; set; }
 
         public int? OwnerId { get; set; }
         public int SubmitterUserId { get; set; }
@@ -60,6 +61,8 @@ namespace Entities
             builder.HasIndex(x => x.OwnerId);
             builder.HasIndex(x => x.SubmitterUserId);
             builder.Property(x => x.CreateDate);
+            builder.Property(x => x.Note)
+                   .HasMaxLength(1000);
             builder.HasMany(x => x.PaperFiles)
                    .WithOne(pf => pf.Program)
                    .HasForeignKey(pf => pf.ProgramId)

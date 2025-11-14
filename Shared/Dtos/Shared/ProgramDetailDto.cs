@@ -45,6 +45,7 @@ namespace SharedModels.Dtos.Shared
     {
         public int GymId { get; set; }
         public string Title { get; set; }
+        public string Note { get; set; }
         public int? CountOfPractice { get; set; }
         public ProgramTypes Type { get; set; }
         public int? OwnerId { get; set; }

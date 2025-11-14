@@ -16,6 +16,10 @@ namespace SharedModels.Dtos.Shared
         [MaxLength(200, ErrorMessageResourceName = nameof(ErrorMsg.MaxLenMsg), ErrorMessageResourceType = typeof(ErrorMsg))]
         public string Title { get; set; }
 
+        [Display(Name = "یادداشت")]
+        [MaxLength(1000, ErrorMessageResourceName = nameof(ErrorMsg.MaxLenMsg), ErrorMessageResourceType = typeof(ErrorMsg))]
+        public string Note { get; set; }
+
         // CountOfPractice is computed from routine items; do not accept from client
 
         [Display(Name = "Type")]
@@ -46,6 +50,7 @@ namespace SharedModels.Dtos.Shared
     {
         public int GymId { get; set; }
         public string Title { get; set; }
+        public string Note { get; set; }
         public int? CountOfPractice { get; set; }
         public ProgramTypes Type { get; set; }
         public int? OwnerId { get; set; }

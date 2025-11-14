@@ -97,6 +97,7 @@ namespace Services.Services.CMS.Programs
             var entity = new Entities.Program
             {
                 Title = dto.Title,
+                Note = dto.Note?.Trim(),
                 Type = dto.Type,
                 OwnerId = ownerId,
                 SubmitterUserId = userId,
@@ -206,6 +207,7 @@ namespace Services.Services.CMS.Programs
 
             entity.Title = dto.Title;
             entity.Type = dto.Type;
+            entity.Note = dto.Note?.Trim();
 
             if (dto.Type == ProgramTypes.Paper)
             {
