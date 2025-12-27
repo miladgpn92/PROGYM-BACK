@@ -630,6 +630,39 @@ namespace Services.Services.CMS.Programs
             return new ResponseModel(true, "");
         }
 
+        public async Task<ResponseModel> UpdateUserProgramDatesAsync(
+            int gymId,
+            int managerUserId,
+            int userProgramId,
+            DateTime startDate,
+            DateTime? endDate,
+            CancellationToken cancellationToken)
+        {
+            var managerHasAccess = await _gymUserRepo.TableNoTracking
+                .AnyAsync(g => g.GymId == gymId && g.UserId == managerUserId && g.Role == UsersRole.manager, cancellationToken);
+            if (!managerHasAccess)
+                return new ResponseModel(false, "Access denied");
+
+            var normalizedStart = startDate.Date;
+            var normalizedEnd = endDate?.Date;
+            if (normalizedEnd.HasValue && normalizedEnd.Value < normalizedStart)
+                return new ResponseModel(false, "تاریخ پایان نمی‌تواند قبل از تاریخ شروع باشد");
+
+            var userProgram = await _userProgramRepo.Table
+                .Include(up => up.Program)
+                .FirstOrDefaultAsync(up => up.Id == userProgramId, cancellationToken);
+            if (userProgram == null)
+                return new ResponseModel(false, "Not found");
+            if (userProgram.Program == null || userProgram.Program.GymId != gymId)
+                return new ResponseModel(false, "Not found");
+
+            userProgram.StartDate = normalizedStart;
+            userProgram.EndDate = normalizedEnd;
+
+            await _userProgramRepo.UpdateAsync(userProgram, cancellationToken);
+            return new ResponseModel(true, "");
+        }
+
         private async Task RemoveRoutineStructureAsync(Entities.Program program, CancellationToken cancellationToken)
         {
             if (program.ProgramRoutineItems == null || program.ProgramRoutineItems.Count == 0)

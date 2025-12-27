@@ -31,5 +31,12 @@ namespace Services.Services.CMS.Programs
             int managerUserId,
             int userProgramId,
             CancellationToken cancellationToken);
+        Task<ResponseModel> UpdateUserProgramDatesAsync(
+            int gymId,
+            int managerUserId,
+            int userProgramId,
+            System.DateTime startDate,
+            System.DateTime? endDate,
+            CancellationToken cancellationToken);
     }
 }
