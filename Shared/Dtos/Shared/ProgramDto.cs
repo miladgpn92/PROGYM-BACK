@@ -31,6 +31,7 @@ namespace SharedModels.Dtos.Shared
         public DateTime? OwnerStartDate { get; set; }
         public DateTime? OwnerEndDate { get; set; }
         public List<int> PaperFileIds { get; set; } = new();
+        public List<int>? CategoryIds { get; set; }
         // SubmitterUserId is taken from authenticated user; do not accept from client
 
         // Routine items (single movement or superset) to attach on create
@@ -40,9 +41,11 @@ namespace SharedModels.Dtos.Shared
         {
             mapping.ForMember(d => d.RoutineItems, opt => opt.Ignore());
             mapping.ForMember(d => d.PaperFileIds, opt => opt.Ignore());
+            mapping.ForMember(d => d.CategoryIds, opt => opt.Ignore());
             mapping.ReverseMap()
                    .ForMember(d => d.ProgramRoutineItems, opt => opt.Ignore())
-                   .ForMember(d => d.PaperFiles, opt => opt.Ignore());
+                   .ForMember(d => d.PaperFiles, opt => opt.Ignore())
+                   .ForMember(d => d.ProgramCategoryPrograms, opt => opt.Ignore());
         }
     }
 
@@ -61,6 +64,7 @@ namespace SharedModels.Dtos.Shared
         public string SubmitterName { get; set; }
         public string SubmitterFamily { get; set; }
         public List<int> PaperFileIds { get; set; } = new();
+        public List<ProgramCategoryItemDto> Categories { get; set; } = new();
 
         public override void CustomMappings(AutoMapper.IMappingExpression<Program, ProgramSelectDto> mapping)
         {
@@ -71,6 +75,9 @@ namespace SharedModels.Dtos.Shared
             mapping.ForMember(d => d.PaperFileIds, opt => opt.MapFrom(s => s.PaperFiles
                 .OrderBy(pf => pf.DisplayOrder)
                 .Select(pf => pf.GymFileId)));
+            mapping.ForMember(d => d.Categories, opt => opt.MapFrom(s => s.ProgramCategoryPrograms
+                .Select(pcp => pcp.ProgramCategory)
+                .OrderBy(pc => pc.Title)));
         }
     }
 }

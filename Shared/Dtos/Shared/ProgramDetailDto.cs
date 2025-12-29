@@ -60,6 +60,7 @@ namespace SharedModels.Dtos.Shared
         public List<int> PaperFileIds { get; set; } = new List<int>();
         public List<ProgramPaperFileInfoDto> PaperFiles { get; set; } = new List<ProgramPaperFileInfoDto>();
         public List<ProgramRoutineItemSelectDto> RoutineItems { get; set; } = new List<ProgramRoutineItemSelectDto>();
+        public List<ProgramCategoryItemDto> Categories { get; set; } = new List<ProgramCategoryItemDto>();
 
         public override void CustomMappings(AutoMapper.IMappingExpression<Program, ProgramDetailDto> mapping)
         {
@@ -72,6 +73,9 @@ namespace SharedModels.Dtos.Shared
                 .OrderBy(pf => pf.DisplayOrder)
                 .Select(pf => pf.GymFileId)));
             mapping.ForMember(d => d.PaperFiles, opt => opt.MapFrom(s => s.PaperFiles.OrderBy(pf => pf.DisplayOrder)));
+            mapping.ForMember(d => d.Categories, opt => opt.MapFrom(s => s.ProgramCategoryPrograms
+                .Select(pcp => pcp.ProgramCategory)
+                .OrderBy(pc => pc.Title)));
         }
     }
 

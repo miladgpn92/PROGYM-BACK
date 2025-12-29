@@ -28,6 +28,7 @@ namespace Entities
         public virtual ICollection<UserProgram> UserPrograms { get; set; }
         public virtual ICollection<Exercise> Exercises { get; set; }
         public virtual ICollection<ProgramPaperFile> PaperFiles { get; set; } = new List<ProgramPaperFile>();
+        public virtual ICollection<ProgramCategoryProgram> ProgramCategoryPrograms { get; set; } = new List<ProgramCategoryProgram>();
     }
 
     public class ProgramConfiguration : IEntityTypeConfiguration<Program>
@@ -66,6 +67,11 @@ namespace Entities
             builder.HasMany(x => x.PaperFiles)
                    .WithOne(pf => pf.Program)
                    .HasForeignKey(pf => pf.ProgramId)
+                   .OnDelete(DeleteBehavior.Cascade);
+
+            builder.HasMany(x => x.ProgramCategoryPrograms)
+                   .WithOne(pcp => pcp.Program)
+                   .HasForeignKey(pcp => pcp.ProgramId)
                    .OnDelete(DeleteBehavior.Cascade);
         }
     }

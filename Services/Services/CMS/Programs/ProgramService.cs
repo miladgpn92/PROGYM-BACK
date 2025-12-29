@@ -28,6 +28,8 @@ namespace Services.Services.CMS.Programs
         private readonly IRepository<Entities.Practice> _practiceRepo;
         private readonly IRepository<ProgramPaperFile> _programPaperFileRepo;
         private readonly IRepository<GymFile> _gymFileRepo;
+        private readonly IRepository<Entities.ProgramCategory> _programCategoryRepo;
+        private readonly IRepository<ProgramCategoryProgram> _programCategoryProgramRepo;
         private readonly IMapper _mapper;
         private readonly ISMSService _smsService;
         private readonly ProjectSettings _projectSettings;
@@ -39,6 +41,8 @@ namespace Services.Services.CMS.Programs
             IRepository<ProgramPractice> programPracticeRepo,
             IRepository<ProgramPaperFile> programPaperFileRepo,
             IRepository<GymFile> gymFileRepo,
+            IRepository<Entities.ProgramCategory> programCategoryRepo,
+            IRepository<ProgramCategoryProgram> programCategoryProgramRepo,
             IRepository<GymUser> gymUserRepo,
             IRepository<Entities.Practice> practiceRepo,
             IRepository<UserProgram> userProgramRepo,
@@ -52,6 +56,8 @@ namespace Services.Services.CMS.Programs
             _programPracticeRepo = programPracticeRepo;
             _programPaperFileRepo = programPaperFileRepo;
             _gymFileRepo = gymFileRepo;
+            _programCategoryRepo = programCategoryRepo;
+            _programCategoryProgramRepo = programCategoryProgramRepo;
             _gymUserRepo = gymUserRepo;
             _practiceRepo = practiceRepo;
             _userProgramRepo = userProgramRepo;
@@ -75,6 +81,11 @@ namespace Services.Services.CMS.Programs
                 if (!ownerInGym)
                     return new ResponseModel<ProgramSelectDto>(false, null, "Owner not found in current gym");
             }
+
+            var categoryIds = NormalizeCategoryIds(dto.CategoryIds);
+            var (categoriesValid, categoriesMessage) = await ValidateProgramCategoriesAsync(gymId, categoryIds, cancellationToken);
+            if (!categoriesValid)
+                return new ResponseModel<ProgramSelectDto>(false, null, categoriesMessage);
 
             var routinePlans = new List<RoutineItemPlan>();
             List<int> paperFileIds = new List<int>();
@@ -107,6 +118,8 @@ namespace Services.Services.CMS.Programs
             };
 
             await _programRepo.AddAsync(entity, cancellationToken);
+
+            await SyncProgramCategoriesAsync(entity, categoryIds, cancellationToken);
 
             if (dto.Type == ProgramTypes.Paper && paperFileIds.Count > 0)
             {
@@ -166,6 +179,8 @@ namespace Services.Services.CMS.Programs
                 .Where(x => x.Id == entity.Id && x.GymId == gymId)
                 .Include(x => x.Owner)
                 .Include(x => x.SubmitterUser)
+                .Include(x => x.ProgramCategoryPrograms)
+                    .ThenInclude(pcp => pcp.ProgramCategory)
                 .ProjectTo<ProgramSelectDto>(_mapper.ConfigurationProvider)
                 .FirstOrDefaultAsync(cancellationToken);
 
@@ -183,6 +198,7 @@ namespace Services.Services.CMS.Programs
                 .Include(x => x.ProgramRoutineItems)
                     .ThenInclude(ri => ri.ProgramPractices)
                 .Include(x => x.PaperFiles)
+                .Include(x => x.ProgramCategoryPrograms)
                 .FirstOrDefaultAsync(x => x.Id == id && x.GymId == gymId, cancellationToken);
             if (entity == null)
                 return new ResponseModel(false, "Not found");
@@ -208,6 +224,15 @@ namespace Services.Services.CMS.Programs
             entity.Title = dto.Title;
             entity.Type = dto.Type;
             entity.Note = dto.Note?.Trim();
+
+            List<int> categoryIds = null;
+            if (dto.CategoryIds != null)
+            {
+                categoryIds = NormalizeCategoryIds(dto.CategoryIds);
+                var (categoriesValid, categoriesMessage) = await ValidateProgramCategoriesAsync(gymId, categoryIds, cancellationToken);
+                if (!categoriesValid)
+                    return new ResponseModel(false, categoriesMessage);
+            }
 
             if (dto.Type == ProgramTypes.Paper)
             {
@@ -285,6 +310,9 @@ namespace Services.Services.CMS.Programs
                     entity.CountOfPractice = await _programPracticeRepo.TableNoTracking.CountAsync(x => x.ProgramId == entity.Id, cancellationToken);
                 }
             }
+
+            if (categoryIds != null)
+                await SyncProgramCategoriesAsync(entity, categoryIds, cancellationToken);
 
             await _programRepo.UpdateAsync(entity, cancellationToken);
             await SyncOwnerAssignmentAsync(
@@ -492,6 +520,8 @@ namespace Services.Services.CMS.Programs
             var items = await query
                 .Include(x => x.Owner)
                 .Include(x => x.SubmitterUser)
+                .Include(x => x.ProgramCategoryPrograms)
+                    .ThenInclude(pcp => pcp.ProgramCategory)
                 .OrderByDescending(x => x.Id)
                 .Paginate(pager)
                 .ProjectTo<ProgramSelectDto>(_mapper.ConfigurationProvider)
@@ -519,6 +549,8 @@ namespace Services.Services.CMS.Programs
                 .Where(x => x.Id == id && x.GymId == gymId)
                 .Include(x => x.Owner)
                 .Include(x => x.SubmitterUser)
+                .Include(x => x.ProgramCategoryPrograms)
+                    .ThenInclude(pcp => pcp.ProgramCategory)
                 .Include(x => x.ProgramRoutineItems)
                     .ThenInclude(ri => ri.ProgramPractices)
                         .ThenInclude(pp => pp.Practice)
@@ -773,6 +805,74 @@ namespace Services.Services.CMS.Programs
 
             existingLookup = existing.ToDictionary(pf => pf.GymFileId);
             program.PaperFiles = orderedFileIds.Select(id => existingLookup[id]).ToList();
+        }
+
+        private static List<int> NormalizeCategoryIds(IEnumerable<int> ids)
+        {
+            return (ids ?? Enumerable.Empty<int>())
+                .Where(id => id > 0)
+                .Distinct()
+                .ToList();
+        }
+
+        private async Task<(bool IsValid, string Message)> ValidateProgramCategoriesAsync(
+            int gymId,
+            IReadOnlyCollection<int> categoryIds,
+            CancellationToken cancellationToken)
+        {
+            if (categoryIds == null || categoryIds.Count == 0)
+                return (true, string.Empty);
+
+            var existingCount = await _programCategoryRepo.TableNoTracking
+                .CountAsync(pc => pc.GymId == gymId && categoryIds.Contains(pc.Id), cancellationToken);
+
+            if (existingCount != categoryIds.Count)
+                return (false, "One or more program categories are invalid");
+
+            return (true, string.Empty);
+        }
+
+        private async Task SyncProgramCategoriesAsync(
+            Entities.Program program,
+            IReadOnlyList<int> requestedIds,
+            CancellationToken cancellationToken)
+        {
+            var existing = program.ProgramCategoryPrograms?.ToList() ?? new List<ProgramCategoryProgram>();
+
+            if (requestedIds.Count == 0)
+            {
+                if (existing.Count > 0)
+                    await _programCategoryProgramRepo.DeleteRangeAsync(existing, cancellationToken);
+                program.ProgramCategoryPrograms = new List<ProgramCategoryProgram>();
+                return;
+            }
+
+            var toRemove = existing.Where(x => !requestedIds.Contains(x.ProgramCategoryId)).ToList();
+            if (toRemove.Count > 0)
+            {
+                await _programCategoryProgramRepo.DeleteRangeAsync(toRemove, cancellationToken);
+                existing = existing.Except(toRemove).ToList();
+            }
+
+            var existingLookup = existing.ToDictionary(x => x.ProgramCategoryId);
+            var toAdd = requestedIds
+                .Where(id => !existingLookup.ContainsKey(id))
+                .Select(id => new ProgramCategoryProgram
+                {
+                    ProgramId = program.Id,
+                    ProgramCategoryId = id
+                })
+                .ToList();
+
+            if (toAdd.Count > 0)
+            {
+                await _programCategoryProgramRepo.AddRangeAsync(toAdd, cancellationToken);
+                existing.AddRange(toAdd);
+            }
+
+            program.ProgramCategoryPrograms = requestedIds
+                .Select(id => existing.First(x => x.ProgramCategoryId == id))
+                .ToList();
         }
 
         private async Task<(bool isValid, string message, List<int> fileIds)> ValidatePaperProgramAsync(int gymId, ProgramDto dto, CancellationToken cancellationToken)

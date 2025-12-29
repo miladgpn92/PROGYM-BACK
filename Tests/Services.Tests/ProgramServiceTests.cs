@@ -470,6 +470,8 @@ namespace Services.Tests
                 new Repository<ProgramPractice>(context),
                 new Repository<ProgramPaperFile>(context),
                 new Repository<GymFile>(context),
+                new Repository<ProgramCategory>(context),
+                new Repository<ProgramCategoryProgram>(context),
                 new Repository<GymUser>(context),
                 new Repository<Practice>(context),
                 new Repository<UserProgram>(context),
