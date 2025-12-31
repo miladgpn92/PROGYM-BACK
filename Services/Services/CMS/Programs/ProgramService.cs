@@ -493,7 +493,7 @@ namespace Services.Services.CMS.Programs
             return new ResponseModel(true, "");
         }
 
-        public async Task<ResponseModel<PagedResult<ProgramSelectDto>>> GetListAsync(int gymId, int userId, string q, ProgramTypes? type, bool includeAll, Pageres pager, CancellationToken cancellationToken)
+        public async Task<ResponseModel<PagedResult<ProgramSelectDto>>> GetListAsync(int gymId, int userId, string q, ProgramTypes? type, IEnumerable<int>? categoryIds, bool includeAll, Pageres pager, CancellationToken cancellationToken)
         {
             pager ??= new Pageres();
             pager.Normalize();
@@ -505,6 +505,16 @@ namespace Services.Services.CMS.Programs
 
             var query = _programRepo.TableNoTracking
                 .Where(x => x.GymId == gymId);
+
+            var normalizedCategoryIds = categoryIds?
+                .Where(id => id > 0)
+                .Distinct()
+                .ToList();
+
+            if (normalizedCategoryIds != null && normalizedCategoryIds.Count > 0)
+            {
+                query = query.Where(x => x.ProgramCategoryPrograms.Any(pcp => normalizedCategoryIds.Contains(pcp.ProgramCategoryId)));
+            }
 
             if (!includeAll)
             {

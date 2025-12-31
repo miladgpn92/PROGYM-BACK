@@ -2,6 +2,7 @@ using Common;
 using Common.Enums;
 using DariaCMS.Common;
 using SharedModels.Dtos.Shared;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -12,7 +13,7 @@ namespace Services.Services.CMS.Programs
         Task<ResponseModel<ProgramSelectDto>> CreateAsync(int gymId, int userId, ProgramDto dto, CancellationToken cancellationToken);
         Task<ResponseModel> UpdateAsync(int gymId, int userId, int id, ProgramDto dto, CancellationToken cancellationToken);
         Task<ResponseModel> DeleteAsync(int gymId, int userId, int id, CancellationToken cancellationToken);
-        Task<ResponseModel<PagedResult<ProgramSelectDto>>> GetListAsync(int gymId, int userId, string q, ProgramTypes? type, bool includeAll, Pageres pager, CancellationToken cancellationToken);
+        Task<ResponseModel<PagedResult<ProgramSelectDto>>> GetListAsync(int gymId, int userId, string q, ProgramTypes? type, IEnumerable<int>? categoryIds, bool includeAll, Pageres pager, CancellationToken cancellationToken);
         Task<ResponseModel<ProgramDetailDto>> GetByIdAsync(int gymId, int userId, int id, CancellationToken cancellationToken);
         Task<ResponseModel> DeleteRoutineItemAsync(int gymId, int userId, int routineItemId, CancellationToken cancellationToken);
         Task<ResponseModel> ReorderRoutineItemsAsync(int gymId, int userId, int programId, ProgramRoutineItemReorderDto dto, CancellationToken cancellationToken);

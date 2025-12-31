@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Services.Services.CMS.Programs;
 using Shared.Api;
 using SharedModels.Dtos.Shared;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -41,6 +42,7 @@ namespace Web.Api.Programs
             [FromQuery] int gymId,
             [FromQuery] string? q,
             [FromQuery] ProgramTypes? type,
+            [FromQuery] List<int>? categoryIds,
             [FromQuery] bool includeAll = false,
             [FromQuery] int pageNumber = 1,
             [FromQuery] int pageSize = 10,
@@ -48,7 +50,7 @@ namespace Web.Api.Programs
         {
             var userId = User.Identity.GetUserIdInt();
             var pager = new Pageres { PageNumber = pageNumber, PageSize = pageSize };
-            var res = await _service.GetListAsync(gymId, userId, q ?? string.Empty, type, includeAll, pager, cancellationToken);
+            var res = await _service.GetListAsync(gymId, userId, q ?? string.Empty, type, categoryIds, includeAll, pager, cancellationToken);
             if (res.IsSuccess)
                 return Ok(res.Model);
             else
