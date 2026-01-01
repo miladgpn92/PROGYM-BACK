@@ -51,41 +51,41 @@ namespace Entities
 
     public class SiteSettingconfiguration : IEntityTypeConfiguration<SiteSetting>
     {
-        private string GetRouteForSeo()
-        {
-            string filePath = Path.Combine(Directory.GetCurrentDirectory(), "routes.json");
+        //private string GetRouteForSeo()
+        //{
+        //    string filePath = Path.Combine(Directory.GetCurrentDirectory(), "routes.json");
 
-            try
-            {
-                string content = File.ReadAllText(filePath);
-                return content;
-            }
-            catch
-            {
+        //    try
+        //    {
+        //        string content = File.ReadAllText(filePath);
+        //        return content;
+        //    }
+        //    catch
+        //    {
 
-                return $"[]";
-            }
-        }
+        //        return $"[]";
+        //    }
+        //}
         public void Configure(EntityTypeBuilder<SiteSetting> builder)
         {
-            int id = 1;
-            // مقدار ثابت برای SeoList
-            string staticSeoList = GetRouteForSeo(); // مقدار واقعی را اینجا قرار دهید
+            //int id = 1;
+            //// مقدار ثابت برای SeoList
+            //string staticSeoList = GetRouteForSeo(); // مقدار واقعی را اینجا قرار دهید
 
-            foreach (CmsLanguage lang in Enum.GetValues(typeof(CmsLanguage)))
-            {
-                builder.HasData(
-                    new SiteSetting()
-                    {
-                        Id = id,
-                        CmsLanguage = lang,
-                        CreateDate = new DateTime(2025, 6, 1, 0, 0, 0), // مقدار ثابت
-                        CreatorIP = "127.0.0.1",
-                        SeoList = staticSeoList, // مقدار ثابت
-                    }
-                );
-                id++;
-            }
+            //foreach (CmsLanguage lang in Enum.GetValues(typeof(CmsLanguage)))
+            //{
+            //    builder.HasData(
+            //        new SiteSetting()
+            //        {
+            //            Id = id,
+            //            CmsLanguage = lang,
+            //            CreateDate = new DateTime(2025, 6, 1, 0, 0, 0), // مقدار ثابت
+            //            CreatorIP = "127.0.0.1",
+            //            SeoList = staticSeoList, // مقدار ثابت
+            //        }
+            //    );
+            //    id++;
+            //}
         }
     }
 

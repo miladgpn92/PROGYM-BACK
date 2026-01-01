@@ -81,11 +81,11 @@ namespace Entities
         public void Configure(EntityTypeBuilder<GlobalSetting> builder)
         {
 
-            builder.HasData(new GlobalSetting
-            {
-                Id = 1,
-                SMSCredit=0
-            });
+            //builder.HasData(new GlobalSetting
+            //{
+            //    Id = 1,
+            //    SMSCredit=0
+            //});
 
           
 
