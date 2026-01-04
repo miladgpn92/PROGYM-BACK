@@ -30,6 +30,7 @@ namespace SharedModels.Dtos.Shared
 
         public DateTime? OwnerStartDate { get; set; }
         public DateTime? OwnerEndDate { get; set; }
+        public int? OwnerRepeatCount { get; set; }
         public List<int> PaperFileIds { get; set; } = new();
         public List<int>? CategoryIds { get; set; }
         // SubmitterUserId is taken from authenticated user; do not accept from client

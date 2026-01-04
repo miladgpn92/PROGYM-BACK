@@ -173,6 +173,7 @@ namespace Services.Services.CMS.Programs
                 entity.OwnerId,
                 dto.OwnerStartDate,
                 dto.OwnerEndDate,
+                dto.OwnerRepeatCount,
                 cancellationToken);
 
             var model = await _programRepo.TableNoTracking
@@ -321,6 +322,7 @@ namespace Services.Services.CMS.Programs
                 entity.OwnerId,
                 dto.OwnerStartDate,
                 dto.OwnerEndDate,
+                dto.OwnerRepeatCount,
                 cancellationToken);
             return new ResponseModel(true, "");
         }
@@ -922,6 +924,7 @@ namespace Services.Services.CMS.Programs
             int? currentOwnerId,
             DateTime? requestedStart,
             DateTime? requestedEnd,
+            int? requestedRepeatCount,
             CancellationToken cancellationToken)
         {
             if (previousOwnerId.HasValue && (!currentOwnerId.HasValue || previousOwnerId.Value != currentOwnerId.Value))
@@ -945,17 +948,20 @@ namespace Services.Services.CMS.Programs
                         ProgramId = programId,
                         UserId = currentOwnerId.Value,
                         StartDate = requestedStart?.Date ?? DateTime.Now,
-                        EndDate = requestedEnd?.Date
+                        EndDate = requestedEnd?.Date,
+                        RepeatCount = NormalizeRepeatCount(requestedRepeatCount)
                     };
 
                     await _userProgramRepo.AddAsync(userProgram, cancellationToken);
                 }
-                else if (requestedStart.HasValue || requestedEnd.HasValue)
+                else if (requestedStart.HasValue || requestedEnd.HasValue || requestedRepeatCount.HasValue)
                 {
                     if (requestedStart.HasValue)
                         current.StartDate = requestedStart.Value.Date;
 
                     current.EndDate = requestedEnd?.Date;
+                    if (requestedRepeatCount.HasValue)
+                        current.RepeatCount = NormalizeRepeatCount(requestedRepeatCount);
                     await _userProgramRepo.UpdateAsync(current, cancellationToken);
                 }
             }
