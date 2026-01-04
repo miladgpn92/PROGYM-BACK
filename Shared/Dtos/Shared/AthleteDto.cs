@@ -41,6 +41,7 @@ namespace SharedModels.Dtos.Shared
         public string PicUrl { get; set; }
 
         public Gender? Gender { get; set; }
+        public AthleteLevel AthleteLevel { get; set; }
         public DateTime CreateDate { get; set; }
         public DateTime? BirthDate { get; set; }
     }

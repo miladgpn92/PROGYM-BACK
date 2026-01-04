@@ -1,5 +1,6 @@
 using Common.Consts;
 using Common;
+using Common.Enums;
 using DariaCMS.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -83,6 +84,17 @@ namespace Web.Api.Athletes
                 return Ok(res.Model);
             else
                 return BadRequest(res.Message);
+        }
+
+        [HttpPut("[action]")]
+        public async Task<IActionResult> SetLevel([FromQuery] int gymId, int id, [FromQuery] AthleteLevel athleteLevel, CancellationToken cancellationToken)
+        {
+            var userId = User.Identity.GetUserIdInt();
+            var res = await _service.UpdateLevelAsync(gymId, userId, id, athleteLevel, cancellationToken);
+            if (res.IsSuccess)
+                return Ok();
+            else
+                return BadRequest(res.Description);
         }
     }
 }

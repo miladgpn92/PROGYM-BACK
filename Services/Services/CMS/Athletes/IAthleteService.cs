@@ -1,6 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Common;
+using Common.Enums;
 using DariaCMS.Common;
 using SharedModels.Dtos.Shared;
 
@@ -13,5 +14,6 @@ namespace Services.Services.CMS.Athletes
         Task<ResponseModel> UpdateAsync(int gymId, int managerId, int userId, AthleteUpdateDto dto, CancellationToken cancellationToken);
         Task<ResponseModel> DeleteAsync(int gymId, int managerId, int userId, CancellationToken cancellationToken);
         Task<ResponseModel<AthleteDetailDto>> GetByIdAsync(int gymId, int managerId, int userId, CancellationToken cancellationToken);
+        Task<ResponseModel> UpdateLevelAsync(int gymId, int managerId, int userId, AthleteLevel athleteLevel, CancellationToken cancellationToken);
     }
 }

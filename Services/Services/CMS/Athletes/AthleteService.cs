@@ -170,6 +170,7 @@ namespace Services.Services.CMS.Athletes
                             Family = u.Family,
                             PhoneNumber = u.PhoneNumber,
                             Gender = u.Gender,
+                            AthleteLevel = u.AthleteLevel,
                             CreateDate = u.CreateDate,
                             PicUrl = u.PicUrl,
                             BirthDate = u.BirthDate
@@ -290,6 +291,7 @@ namespace Services.Services.CMS.Athletes
                 Family = user.Family,
                 PhoneNumber = user.PhoneNumber,
                 Gender = user.Gender,
+                AthleteLevel = user.AthleteLevel,
                 CreateDate = user.CreateDate,
                 PicUrl = user.PicUrl,
                 BirthDate = user.BirthDate,
@@ -311,6 +313,31 @@ namespace Services.Services.CMS.Athletes
             };
 
             return new ResponseModel<AthleteDetailDto>(true, detail);
+        }
+
+        public async Task<ResponseModel> UpdateLevelAsync(int gymId, int managerId, int userId, AthleteLevel athleteLevel, CancellationToken cancellationToken)
+        {
+            var isManagerLinked = await _gymUserRepo.TableNoTracking
+                .AnyAsync(gu => gu.GymId == gymId && gu.UserId == managerId && gu.Role == UsersRole.manager, cancellationToken);
+            if (!isManagerLinked)
+                return new ResponseModel(false, "Unauthorized manager for this gym");
+
+            var inGym = await _gymUserRepo.TableNoTracking
+                .AnyAsync(gu => gu.GymId == gymId && gu.UserId == userId && gu.Role == UsersRole.athlete, cancellationToken);
+            if (!inGym)
+                return new ResponseModel(false, "Athlete not found in this gym");
+
+            var user = await _userManager.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+            if (user == null)
+                return new ResponseModel(false, "User not found");
+
+            user.AthleteLevel = athleteLevel;
+
+            var res = await _userManager.UpdateAsync(user);
+            if (!res.Succeeded)
+                return new ResponseModel(false, res.Errors.FirstOrDefault()?.Description ?? "Update user failed");
+
+            return new ResponseModel(true, "");
         }
 
         private static int? CalculateAge(DateTime? birthDate, DateTime asOf)

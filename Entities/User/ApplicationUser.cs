@@ -35,6 +35,8 @@ namespace Entities
 
         public UsersRole UserRole { get; set; }
 
+        public AthleteLevel AthleteLevel { get; set; }
+
         //This property is used to store a validation code that is used to verify a user's identity.
         public string ValidationCode { get; set; }
 
