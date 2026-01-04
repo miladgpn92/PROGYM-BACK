@@ -66,6 +66,7 @@ namespace SharedModels.Dtos.Shared
         public int ProgramId { get; set; }
         public DateTime StartDate { get; set; }
         public DateTime? EndDate { get; set; }
+        public int RepeatCount { get; set; }
         public string ProgramTitle { get; set; }
         public ProgramTypes ProgramType { get; set; }
     }

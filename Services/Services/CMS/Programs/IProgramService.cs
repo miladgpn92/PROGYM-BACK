@@ -26,6 +26,7 @@ namespace Services.Services.CMS.Programs
             int athleteUserId,
             System.DateTime startDate,
             System.DateTime? endDate,
+            int? repeatCount,
             CancellationToken cancellationToken);
         Task<ResponseModel> DeAttachAthleteAsync(
             int gymId,

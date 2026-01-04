@@ -138,7 +138,15 @@ namespace Web.Api.Programs
         public async Task<IActionResult> AttachToAthlete([FromQuery] int gymId, [FromBody] UserProgramAttachDto dto, CancellationToken cancellationToken)
         {
             var userId = User.Identity.GetUserIdInt();
-            var res = await _service.AttachToAthleteAsync(gymId, userId, dto.ProgramId, dto.AthleteUserId, dto.StartDate, dto.EndDate, cancellationToken);
+            var res = await _service.AttachToAthleteAsync(
+                gymId,
+                userId,
+                dto.ProgramId,
+                dto.AthleteUserId,
+                dto.StartDate,
+                dto.EndDate,
+                dto.RepeatCount,
+                cancellationToken);
             if (res.IsSuccess)
                 return Ok();
             else

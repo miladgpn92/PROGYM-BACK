@@ -10,6 +10,7 @@ namespace Entities
         public int ProgramId { get; set; }
         public DateTime StartDate { get; set; }
         public DateTime? EndDate { get; set; }
+        public int RepeatCount { get; set; } = 1;
 
         public virtual ApplicationUser User { get; set; }
         public virtual Program Program { get; set; }
@@ -30,7 +31,9 @@ namespace Entities
                    .OnDelete(DeleteBehavior.Cascade);
 
             builder.HasIndex(x => new { x.UserId, x.ProgramId });
+
+            builder.Property(x => x.RepeatCount)
+                   .HasDefaultValue(1);
         }
     }
 }
-

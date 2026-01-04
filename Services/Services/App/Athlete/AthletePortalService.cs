@@ -110,6 +110,7 @@ namespace Services.Services.App.Athlete
                     ProgramType = up.Program.Type,
                     StartDate = up.StartDate,
                     EndDate = up.EndDate,
+                    RepeatCount = up.RepeatCount,
                     IsActive = !up.EndDate.HasValue || up.EndDate.Value.Date >= today
                 });
 

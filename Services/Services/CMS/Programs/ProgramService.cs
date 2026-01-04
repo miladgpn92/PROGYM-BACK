@@ -583,6 +583,7 @@ namespace Services.Services.CMS.Programs
             int athleteUserId,
             DateTime startDate,
             DateTime? endDate,
+            int? repeatCount,
             CancellationToken cancellationToken)
         {
             var managerHasAccess = await _gymUserRepo.TableNoTracking
@@ -606,12 +607,16 @@ namespace Services.Services.CMS.Programs
             if (existing != null)
                 return new ResponseModel(false, "Program is already attached to athlete");
 
+            if (repeatCount.HasValue && repeatCount.Value <= 0)
+                return new ResponseModel(false, "RepeatCount must be greater than zero");
+
             var entity = new UserProgram
             {
                 ProgramId = programId,
                 UserId = athleteUserId,
                 StartDate = startDate,
-                EndDate = endDate
+                EndDate = endDate,
+                RepeatCount = NormalizeRepeatCount(repeatCount)
             };
 
             await _userProgramRepo.AddAsync(entity, cancellationToken);
@@ -722,6 +727,11 @@ namespace Services.Services.CMS.Programs
                 await _programRoutineItemRepo.DeleteRangeAsync(routineItems, cancellationToken);
 
             program.ProgramRoutineItems = new List<ProgramRoutineItem>();
+        }
+
+        private static int NormalizeRepeatCount(int? repeatCount)
+        {
+            return repeatCount.HasValue && repeatCount.Value > 0 ? repeatCount.Value : 1;
         }
 
         private async Task PopulatePracticeDescriptionsAsync(ProgramDetailDto dto, CancellationToken cancellationToken)
