@@ -12,5 +12,8 @@ namespace SharedModels.Dtos.Shared
         public DateTime StartDate { get; set; }
 
         public DateTime? EndDate { get; set; }
+
+        [Range(1, int.MaxValue, ErrorMessage = "RepeatCount must be greater than zero")]
+        public int? RepeatCount { get; set; }
     }
 }

@@ -168,7 +168,14 @@ namespace Web.Api.Programs
         public async Task<IActionResult> UpdateUserProgramDates([FromQuery] int gymId, [FromBody] UserProgramDateUpdateDto dto, CancellationToken cancellationToken)
         {
             var userId = User.Identity.GetUserIdInt();
-            var res = await _service.UpdateUserProgramDatesAsync(gymId, userId, dto.UserProgramId, dto.StartDate, dto.EndDate, cancellationToken);
+            var res = await _service.UpdateUserProgramDatesAsync(
+                gymId,
+                userId,
+                dto.UserProgramId,
+                dto.StartDate,
+                dto.EndDate,
+                dto.RepeatCount,
+                cancellationToken);
             if (res.IsSuccess)
                 return Ok();
             else

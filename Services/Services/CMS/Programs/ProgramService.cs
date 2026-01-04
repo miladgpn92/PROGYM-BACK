@@ -685,6 +685,7 @@ namespace Services.Services.CMS.Programs
             int userProgramId,
             DateTime startDate,
             DateTime? endDate,
+            int? repeatCount,
             CancellationToken cancellationToken)
         {
             var managerHasAccess = await _gymUserRepo.TableNoTracking
@@ -707,6 +708,13 @@ namespace Services.Services.CMS.Programs
 
             userProgram.StartDate = normalizedStart;
             userProgram.EndDate = normalizedEnd;
+            if (repeatCount.HasValue)
+            {
+                if (repeatCount.Value <= 0)
+                    return new ResponseModel(false, "RepeatCount must be greater than zero");
+
+                userProgram.RepeatCount = repeatCount.Value;
+            }
 
             await _userProgramRepo.UpdateAsync(userProgram, cancellationToken);
             return new ResponseModel(true, "");

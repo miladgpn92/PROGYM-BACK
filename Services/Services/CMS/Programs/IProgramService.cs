@@ -39,6 +39,7 @@ namespace Services.Services.CMS.Programs
             int userProgramId,
             System.DateTime startDate,
             System.DateTime? endDate,
+            int? repeatCount,
             CancellationToken cancellationToken);
     }
 }
