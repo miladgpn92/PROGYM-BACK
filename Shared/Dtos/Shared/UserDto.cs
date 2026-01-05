@@ -110,7 +110,6 @@ namespace SharedModels.Dtos
 
         public Gender Gender { get; set; }
         public UsersRole UserRole { get; set; }
-        public AthleteLevel AthleteLevel { get; set; }
         public string ValidationCode { get; set; }
         public DateTime LastLoginDate { get; set; }
 

@@ -210,7 +210,6 @@ namespace SharedModels.Dtos
 
 
         public UsersRole UserRole { get; set; }
-        public AthleteLevel AthleteLevel { get; set; }
 
         public bool IsRegisterComplete { get; set; }
  

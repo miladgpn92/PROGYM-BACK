@@ -143,8 +143,7 @@ namespace Web.Api
                         IsRegisterComplete=res.Model.IsRegisterComplete,
                         JWT=jwt,
                         Name=res.Model.Name,
-                        UserRole= res.Model.UserRole,
-                        AthleteLevel = res.Model.AthleteLevel
+                        UserRole= res.Model.UserRole
 
                     };
 

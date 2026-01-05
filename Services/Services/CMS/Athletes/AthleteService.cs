@@ -118,7 +118,14 @@ namespace Services.Services.CMS.Athletes
                 .AnyAsync(gu => gu.GymId == gymId && gu.UserId == user.Id, cancellationToken);
             if (!existsInGym)
             {
-                var gu = new GymUser { GymId = gymId, UserId = user.Id, Role = UsersRole.athlete, JoinDate = DateTime.Now };
+                var gu = new GymUser
+                {
+                    GymId = gymId,
+                    UserId = user.Id,
+                    Role = UsersRole.athlete,
+                    AthleteLevel = AthleteLevel.Standard,
+                    JoinDate = DateTime.Now
+                };
                 await _gymUserRepo.AddAsync(gu, cancellationToken);
             }
 
@@ -170,7 +177,7 @@ namespace Services.Services.CMS.Athletes
                             Family = u.Family,
                             PhoneNumber = u.PhoneNumber,
                             Gender = u.Gender,
-                            AthleteLevel = u.AthleteLevel,
+                            AthleteLevel = gu.AthleteLevel,
                             CreateDate = u.CreateDate,
                             PicUrl = u.PicUrl,
                             BirthDate = u.BirthDate
@@ -255,9 +262,9 @@ namespace Services.Services.CMS.Athletes
             if (!isManagerLinked)
                 return new ResponseModel<AthleteDetailDto>(false, null, "Unauthorized manager for this gym");
 
-            var inGym = await _gymUserRepo.TableNoTracking
-                .AnyAsync(gu => gu.GymId == gymId && gu.UserId == userId && gu.Role == UsersRole.athlete, cancellationToken);
-            if (!inGym)
+            var gymUser = await _gymUserRepo.TableNoTracking
+                .FirstOrDefaultAsync(gu => gu.GymId == gymId && gu.UserId == userId && gu.Role == UsersRole.athlete, cancellationToken);
+            if (gymUser == null)
                 return new ResponseModel<AthleteDetailDto>(false, null, "Athlete not found in this gym");
 
             var user = await _userManager.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
@@ -291,7 +298,7 @@ namespace Services.Services.CMS.Athletes
                 Family = user.Family,
                 PhoneNumber = user.PhoneNumber,
                 Gender = user.Gender,
-                AthleteLevel = user.AthleteLevel,
+                AthleteLevel = gymUser.AthleteLevel,
                 CreateDate = user.CreateDate,
                 PicUrl = user.PicUrl,
                 BirthDate = user.BirthDate,
@@ -322,20 +329,13 @@ namespace Services.Services.CMS.Athletes
             if (!isManagerLinked)
                 return new ResponseModel(false, "Unauthorized manager for this gym");
 
-            var inGym = await _gymUserRepo.TableNoTracking
-                .AnyAsync(gu => gu.GymId == gymId && gu.UserId == userId && gu.Role == UsersRole.athlete, cancellationToken);
-            if (!inGym)
+            var gymUser = await _gymUserRepo.Table
+                .FirstOrDefaultAsync(gu => gu.GymId == gymId && gu.UserId == userId && gu.Role == UsersRole.athlete, cancellationToken);
+            if (gymUser == null)
                 return new ResponseModel(false, "Athlete not found in this gym");
 
-            var user = await _userManager.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
-            if (user == null)
-                return new ResponseModel(false, "User not found");
-
-            user.AthleteLevel = athleteLevel;
-
-            var res = await _userManager.UpdateAsync(user);
-            if (!res.Succeeded)
-                return new ResponseModel(false, res.Errors.FirstOrDefault()?.Description ?? "Update user failed");
+            gymUser.AthleteLevel = athleteLevel;
+            await _gymUserRepo.UpdateAsync(gymUser, cancellationToken);
 
             return new ResponseModel(true, "");
         }

@@ -192,6 +192,7 @@ namespace Services.Services.CMS.UserGym
                 GymId = gymId,
                 UserId = user.Id,
                 Role = dto.Role,
+                AthleteLevel = AthleteLevel.Standard,
                 JoinDate = DateTime.UtcNow
             };
 

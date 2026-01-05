@@ -11,6 +11,7 @@ namespace Entities
         public int GymId { get; set; }
         public int UserId { get; set; }
         public UsersRole Role { get; set; }
+        public AthleteLevel AthleteLevel { get; set; }
         public DateTime JoinDate { get; set; }
 
         public virtual Gym Gym { get; set; }

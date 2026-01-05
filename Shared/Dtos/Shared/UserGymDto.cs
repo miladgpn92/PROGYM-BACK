@@ -16,6 +16,7 @@ namespace SharedModels.Dtos.Shared
         public int GymId { get; set; }
         public int UserId { get; set; }
         public UsersRole Role { get; set; }
+        public AthleteLevel AthleteLevel { get; set; }
         public string GymTitle { get; set; }
         public string GymLogoUrl { get; set; }
         public string GymSlug { get; set; }
