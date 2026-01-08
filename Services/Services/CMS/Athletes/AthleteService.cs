@@ -170,29 +170,37 @@ namespace Services.Services.CMS.Athletes
             var query = from gu in _gymUserRepo.TableNoTracking
                         join u in _userManager.Users on gu.UserId equals u.Id
                         where gu.GymId == gymId && gu.Role == UsersRole.athlete
-                        select new AthleteSelectDto
+                        select new
                         {
-                            Id = u.Id,
-                            Name = u.Name,
-                            Family = u.Family,
-                            PhoneNumber = u.PhoneNumber,
-                            Gender = u.Gender,
-                            AthleteLevel = gu.AthleteLevel,
-                            CreateDate = u.CreateDate,
-                            PicUrl = u.PicUrl,
-                            BirthDate = u.BirthDate
+                            JoinDate = gu.JoinDate,
+                            Athlete = new AthleteSelectDto
+                            {
+                                Id = u.Id,
+                                Name = u.Name,
+                                Family = u.Family,
+                                PhoneNumber = u.PhoneNumber,
+                                Gender = u.Gender,
+                                AthleteLevel = gu.AthleteLevel,
+                                CreateDate = u.CreateDate,
+                                PicUrl = u.PicUrl,
+                                BirthDate = u.BirthDate
+                            }
                         };
 
             if (!string.IsNullOrWhiteSpace(q))
             {
                 var term = q.Trim();
-                query = query.Where(x => (x.Name ?? "").Contains(term) || (x.Family ?? "").Contains(term) || (x.PhoneNumber ?? "").Contains(term));
+                query = query.Where(x => (x.Athlete.Name ?? "").Contains(term) || (x.Athlete.Family ?? "").Contains(term) || (x.Athlete.PhoneNumber ?? "").Contains(term));
             }
 
-            var ordered = query.OrderBy(x => x.Family).ThenBy(x => x.Name);
+            var ordered = query
+                .OrderByDescending(x => x.JoinDate)
+                .ThenBy(x => x.Athlete.Family)
+                .ThenBy(x => x.Athlete.Name);
             var totalCount = await ordered.CountAsync(cancellationToken);
 
             var items = await ordered
+                .Select(x => x.Athlete)
                 .Paginate(pager)
                 .ToListAsync(cancellationToken);
 
